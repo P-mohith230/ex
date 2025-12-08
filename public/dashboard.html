@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Faculty Dashboard - Attendance Management</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f6fa;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header-left h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .header-left p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .faculty-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 10px 20px;
+            border-radius: 25px;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .info-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .info-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .info-card h3 {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .info-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .info-card.semester .value { color: #667eea; }
+        .info-card.subject .value { color: #764ba2; }
+        .info-card.students .value { color: #28a745; }
+
+        .attendance-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .section-header h2 {
+            color: #333;
+        }
+
+        .date-picker {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .date-picker label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        .date-picker input[type="date"] {
+            padding: 10px 15px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .quick-actions {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-all-present {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-all-present:hover {
+            background: #218838;
+        }
+
+        .btn-all-absent {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-all-absent:hover {
+            background: #c82333;
+        }
+
+        .btn-clear {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-save {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            font-size: 16px;
+        }
+
+        .btn-save:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #333;
+            font-weight: 600;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .attendance-toggle {
+            display: flex;
+            gap: 5px;
+        }
+
+        .toggle-btn {
+            width: 50px;
+            height: 40px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn.present {
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .toggle-btn.present.active {
+            background: #28a745;
+            color: white;
+        }
+
+        .toggle-btn.absent {
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .toggle-btn.absent.active {
+            background: #dc3545;
+            color: white;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .sheet-section {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 25px;
+        }
+
+        .sheet-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .sheet-link {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #ddd;
+        }
+
+        .sheet-link.has-file {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .sheet-link a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .sheet-link a:hover {
+            text-decoration: underline;
+        }
+
+        .sheet-icon {
+            font-size: 2rem;
+        }
+
+        .no-sheet {
+            color: #666;
+            font-style: italic;
+        }
+
+        footer {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>🎓 Faculty Dashboard</h1>
+            <p>Mark and manage student attendance</p>
+        </div>
+        <div class="header-right">
+            <div class="faculty-badge">
+                <span id="facultyName">Loading...</span>
+            </div>
+            <button class="btn-logout" onclick="logout()">🚪 Logout</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="info-cards">
+            <div class="info-card semester">
+                <h3>Semester</h3>
+                <div class="value" id="semesterValue">-</div>
+            </div>
+            <div class="info-card subject">
+                <h3>Subject</h3>
+                <div class="value" id="subjectValue">-</div>
+            </div>
+            <div class="info-card students">
+                <h3>Total Students</h3>
+                <div class="value" id="studentsValue">-</div>
+            </div>
+            <div class="info-card">
+                <h3>Department</h3>
+                <div class="value" id="departmentValue">-</div>
+            </div>
+        </div>
+
+        <div id="message" class="message"></div>
+
+        <div class="attendance-section">
+            <div class="section-header">
+                <h2>📋 Mark Attendance</h2>
+                <div class="date-picker">
+                    <label for="attendanceDate">Date:</label>
+                    <input type="date" id="attendanceDate">
+                </div>
+            </div>
+
+            <div class="quick-actions">
+                <button class="btn btn-all-present" onclick="markAll('P')">✓ Mark All Present</button>
+                <button class="btn btn-all-absent" onclick="markAll('A')">✗ Mark All Absent</button>
+                <button class="btn btn-clear" onclick="clearAll()">↺ Clear All</button>
+                <button class="btn btn-save" onclick="saveAttendance()">💾 Save Attendance</button>
+            </div>
+
+            <table id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th>S.No</th>
+                        <th>Roll Number</th>
+                        <th>Student Name</th>
+                        <th>Attendance</th>
+                    </tr>
+                </thead>
+                <tbody id="studentsBody">
+                    <!-- Students will be loaded here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="sheet-section">
+            <h2>📊 Your Attendance Sheet</h2>
+            <div id="sheetInfo" class="sheet-link">
+                <span class="sheet-icon">📄</span>
+                <span class="no-sheet">Loading sheet info...</span>
+            </div>
+            <p style="margin-top: 15px; color: #666; font-size: 0.9rem;">
+                <strong>💡 Note:</strong> Attendance is automatically saved to the Excel file in the workspace. 
+                Open the file directly in Excel to view all data - no download needed!
+            </p>
+        </div>
+    </div>
+
+    <footer>
+        Faculty Attendance Portal &copy; 2025 | Logged in as <span id="footerName"></span>
+    </footer>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+        let faculty = null;
+        let students = [];
+        let attendanceStatus = {}; // { rollNo: 'P' or 'A' }
+
+        // Check login and load data
+        window.addEventListener('DOMContentLoaded', async () => {
+            const session = sessionStorage.getItem('facultySession');
+            if (!session) {
+                window.location.href = 'login.html';
+                return;
+            }
+
+            faculty = JSON.parse(session);
+            
+            // Update UI with faculty info
+            document.getElementById('facultyName').textContent = faculty.name;
+            document.getElementById('footerName').textContent = faculty.name;
+            document.getElementById('semesterValue').textContent = faculty.semester;
+            document.getElementById('subjectValue').textContent = faculty.subject;
+            document.getElementById('departmentValue').textContent = faculty.department;
+
+            // Set today's date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('attendanceDate').value = today;
+
+            // Load students
+            await loadStudents();
+            
+            // Load existing sheet info
+            await loadSheetInfo();
+            
+            // Load existing attendance for today's date
+            await loadAttendanceForDate();
+        });
+
+        // Format date to match sheet column format (e.g., "08-Dec")
+        function formatDateForSheet(dateStr) {
+            const date = new Date(dateStr);
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = date.toLocaleString('en-US', { month: 'short' });
+            return `${day}-${month}`;
+        }
+
+        async function loadStudents() {
+            try {
+                const response = await fetch(`${API_BASE}/api/students/${faculty.semester}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    students = result.data;
+                    document.getElementById('studentsValue').textContent = students.length;
+                    renderStudentsTable();
+                }
+            } catch (error) {
+                console.error('Error loading students:', error);
+                showMessage('Error loading students', 'error');
+            }
+        }
+
+        async function loadAttendanceForDate() {
+            const dateInput = document.getElementById('attendanceDate').value;
+            if (!dateInput) return;
+            
+            const formattedDate = formatDateForSheet(dateInput);
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/attendance/load/${faculty.id}/${formattedDate}`);
+                const result = await response.json();
+
+                if (result.success && result.exists) {
+                    // Load existing attendance into state
+                    attendanceStatus = result.attendance;
+                    renderStudentsTable();
+                    
+                    // Show info if data was loaded
+                    const markedCount = Object.keys(attendanceStatus).filter(k => attendanceStatus[k]).length;
+                    if (markedCount > 0) {
+                        showMessage(`📋 Loaded existing attendance for ${formattedDate}: ${markedCount} students marked`, 'success');
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading attendance:', error);
+            }
+        }
+
+        // Add event listener for date change
+        document.getElementById('attendanceDate').addEventListener('change', async () => {
+            attendanceStatus = {}; // Clear current status
+            await loadAttendanceForDate();
+        });
+
+        function renderStudentsTable() {
+            const tbody = document.getElementById('studentsBody');
+            tbody.innerHTML = '';
+
+            students.forEach((student, index) => {
+                const status = attendanceStatus[student.rollNo] || '';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td><strong>${student.rollNo}</strong></td>
+                    <td>${student.name}</td>
+                    <td>
+                        <div class="attendance-toggle">
+                            <button class="toggle-btn present ${status === 'P' ? 'active' : ''}" 
+                                    onclick="toggleAttendance('${student.rollNo}', 'P', this)">P</button>
+                            <button class="toggle-btn absent ${status === 'A' ? 'active' : ''}" 
+                                    onclick="toggleAttendance('${student.rollNo}', 'A', this)">A</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        function toggleAttendance(rollNo, status, btn) {
+            // Clear previous selection for this student
+            const row = btn.closest('tr');
+            row.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
+            
+            // Set new status
+            btn.classList.add('active');
+            attendanceStatus[rollNo] = status;
+        }
+
+        function markAll(status) {
+            students.forEach(student => {
+                attendanceStatus[student.rollNo] = status;
+            });
+            renderStudentsTable();
+        }
+
+        function clearAll() {
+            attendanceStatus = {};
+            renderStudentsTable();
+        }
+
+        async function saveAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            if (!date) {
+                showMessage('Please select a date', 'error');
+                return;
+            }
+
+            // Check if all students are marked
+            const unmarked = students.filter(s => !attendanceStatus[s.rollNo]);
+            if (unmarked.length > 0) {
+                showMessage(`Please mark attendance for all students. ${unmarked.length} students unmarked.`, 'error');
+                return;
+            }
+
+            // Format date for sheet column (e.g., "08-Dec")
+            const formattedDate = formatDateForSheet(date);
+
+            const attendance = students.map(s => ({
+                rollNo: s.rollNo,
+                name: s.name,
+                status: attendanceStatus[s.rollNo]
+            }));
+
+            try {
+                const response = await fetch(`${API_BASE}/api/attendance/save`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        facultyId: faculty.id,
+                        date: formattedDate,
+                        attendance: attendance
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showMessage(`✅ ${result.message} (${result.updatedCount} students)`, 'success');
+                    loadSheetInfo(); // Refresh sheet link
+                } else {
+                    showMessage(result.message || 'Error saving attendance', 'error');
+                }
+            } catch (error) {
+                showMessage('Error connecting to server', 'error');
+            }
+        }
+
+        async function loadSheetInfo() {
+            try {
+                const response = await fetch(`${API_BASE}/api/attendance/sheet/${faculty.id}`);
+                const result = await response.json();
+
+                const sheetDiv = document.getElementById('sheetInfo');
+
+                if (result.success && result.exists) {
+                    sheetDiv.className = 'sheet-link has-file';
+                    sheetDiv.innerHTML = `
+                        <span class="sheet-icon">📊</span>
+                        <div>
+                            <strong style="color: #28a745;">✅ Sheet Active: ${result.fileName}</strong>
+                            <p style="color: #666; margin-top: 5px; font-size: 0.9rem;">
+                                📁 Location: <code>server/attendance_sheets/${result.fileName}</code>
+                            </p>
+                            <p style="color: #666; margin-top: 5px; font-size: 0.9rem;">
+                                All attendance data is automatically saved to this file when you click "Save Attendance"
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    sheetDiv.className = 'sheet-link';
+                    sheetDiv.innerHTML = `
+                        <span class="sheet-icon">⚠️</span>
+                        <span class="no-sheet">Sheet not found. Please run generateFacultySheets.js to create sheets.</span>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error loading sheet info:', error);
+            }
+        }
+
+        function showMessage(text, type) {
+            const msgDiv = document.getElementById('message');
+            msgDiv.textContent = text;
+            msgDiv.className = `message ${type}`;
+            msgDiv.style.display = 'block';
+
+            setTimeout(() => {
+                msgDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function logout() {
+            sessionStorage.removeItem('facultySession');
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
