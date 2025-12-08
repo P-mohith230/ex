@@ -6,7 +6,7 @@ const cors = require('cors');
 const fs = require('fs');
 
 // Import faculty and student data
-const { facultyData, studentsData } = require('./data/facultyData');
+const { facultyData, studentsData, adminData } = require('./data/facultyData');
 const { generateDates } = require('./generateFacultySheets');
 
 const app = express();
@@ -99,6 +99,111 @@ app.post('/api/faculty/login', (req, res) => {
       department: faculty.department
     }
   });
+});
+
+// =====================================================
+// ADMIN ROUTES
+// =====================================================
+
+// Admin login
+app.post('/api/admin/login', (req, res) => {
+  const { adminId, password } = req.body;
+  
+  const admin = adminData.find(a => a.id === adminId);
+  
+  if (!admin) {
+    return res.status(404).json({
+      success: false,
+      message: 'Admin not found'
+    });
+  }
+  
+  if (admin.password !== password) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid password'
+    });
+  }
+  
+  res.json({
+    success: true,
+    message: 'Login successful',
+    admin: {
+      id: admin.id,
+      name: admin.name,
+      role: admin.role
+    }
+  });
+});
+
+// Get all faculty sheets data for admin
+app.get('/api/admin/all-sheets', (req, res) => {
+  try {
+    const sheetsData = {};
+    let totalStudents = 0;
+    let totalSheets = 0;
+    
+    facultyData.forEach(faculty => {
+      const { filePath, fileName } = getFacultySheetPath(faculty);
+      
+      if (fs.existsSync(filePath)) {
+        totalSheets++;
+        const workbook = xlsx.readFile(filePath);
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const data = xlsx.utils.sheet_to_json(worksheet);
+        
+        // Process student data
+        const students = data.map(row => ({
+          rollNo: row['Roll No'],
+          name: row['Student Name'],
+          present: row['Total Present'] || 0,
+          absent: row['Total Absent'] || 0,
+          percentage: row['Percentage'] || '0%'
+        }));
+        
+        totalStudents += students.length;
+        
+        // Calculate stats
+        let totalPresent = 0, totalAbsent = 0, totalPercentage = 0;
+        students.forEach(s => {
+          totalPresent += s.present;
+          totalAbsent += s.absent;
+          totalPercentage += parseFloat(s.percentage) || 0;
+        });
+        
+        sheetsData[faculty.id] = {
+          fileName,
+          students,
+          stats: {
+            totalPresent,
+            totalAbsent,
+            avgPercentage: students.length > 0 ? (totalPercentage / students.length).toFixed(1) : 0
+          }
+        };
+      } else {
+        sheetsData[faculty.id] = {
+          fileName: null,
+          students: [],
+          stats: { totalPresent: 0, totalAbsent: 0, avgPercentage: 0 }
+        };
+      }
+    });
+    
+    res.json({
+      success: true,
+      totalSheets,
+      totalStudents,
+      data: sheetsData
+    });
+    
+  } catch (error) {
+    console.error('Error loading sheets:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error loading attendance data',
+      error: error.message
+    });
+  }
 });
 
 // Get students for a semester
