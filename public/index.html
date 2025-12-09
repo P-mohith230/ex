@@ -4,8 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Student Attendance Management System</title>
-    <meta http-equiv="refresh" content="0; url=login.html">
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -13,17 +18,174 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            color: white;
+            padding: 20px;
+        }
+
+        .home-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 50px 40px;
+            width: 100%;
+            max-width: 600px;
             text-align: center;
         }
-        a { color: white; }
+
+        .logo {
+            margin-bottom: 40px;
+        }
+
+        .logo h1 {
+            color: #667eea;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            font-size: 3rem;
+        }
+
+        .logo p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
+        .subtitle {
+            color: #555;
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            font-weight: 300;
+        }
+
+        .role-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+
+        .role-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 30px 20px;
+            text-decoration: none;
+            color: white;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .role-card.student {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .role-card.faculty {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .role-card.admin {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .role-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        .role-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .role-description {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .info-text {
+            margin-top: 40px;
+            color: #888;
+            font-size: 0.9rem;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 600px) {
+            .home-container {
+                padding: 30px 20px;
+            }
+
+            .logo h1 {
+                font-size: 2rem;
+            }
+
+            .role-cards {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 </head>
 <body>
-    <div>
-        <h1>🎓 Student Attendance Management System</h1>
-        <p>Redirecting to login page...</p>
-        <p><a href="login.html">Click here if not redirected</a></p>
+    <div class="home-container">
+        <div class="logo">
+            <h1>
+                <span class="logo-icon">🎓</span>
+                <span>Attendance System</span>
+            </h1>
+            <p>Welcome to Student Attendance Management</p>
+        </div>
+
+        <p class="subtitle">Select your role to continue</p>
+
+        <div class="role-cards">
+            <a href="#" class="role-card student" onclick="alert('Student portal coming soon!'); return false;">
+                <div class="role-icon">👨‍🎓</div>
+                <div class="role-title">Student</div>
+                <div class="role-description">View your attendance</div>
+            </a>
+
+            <a href="/login.html" class="role-card faculty">
+                <div class="role-icon">👨‍🏫</div>
+                <div class="role-title">Faculty</div>
+                <div class="role-description">Mark attendance</div>
+            </a>
+
+            <a href="/admin-login.html" class="role-card admin">
+                <div class="role-icon">👤</div>
+                <div class="role-title">Admin</div>
+                <div class="role-description">Manage system</div>
+            </a>
+        </div>
+
+        <div class="info-text">
+            <strong>📌 System Status:</strong> Connected to localhost:3000<br>
+            <small>All attendance data is stored securely</small>
+        </div>
     </div>
+
+    <script>
+        // Verify server connection on page load
+        fetch('http://localhost:3000/api/faculty/list')
+            .then(response => response.json())
+            .then(data => {
+                console.log('✅ Server connection successful');
+                console.log('Connected to:', window.location.origin);
+            })
+            .catch(error => {
+                console.error('❌ Server connection failed:', error);
+                alert('Warning: Cannot connect to server at localhost:3000. Please ensure the server is running.');
+            });
+    </script>
 </body>
 </html>

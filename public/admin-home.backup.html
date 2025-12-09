@@ -1,0 +1,2828 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Portal - Attendance Management</title>
+    <!-- XLSX Library for Excel parsing -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        /* CRITICAL: Ensure no focus locks - All elements are clickable */
+        * {
+            pointer-events: auto !important;
+        }
+
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            pointer-events: auto !important;
+        }
+        
+        /* Ensure all interactive elements work */
+        button, a, .stat-card, .btn-logout, .btn-primary, .form-input {
+            pointer-events: auto !important;
+            cursor: pointer;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .logo h1 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+        }
+
+        .logo p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .admin-badge {
+            background: #e94560;
+            padding: 8px 20px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            pointer-events: auto !important;
+        }
+        
+        .main-content * {
+            pointer-events: auto !important;
+        }
+
+        .page-header {
+            margin-bottom: 30px;
+        }
+
+        .page-header h2 {
+            font-size: 1.8rem;
+            color: #1a1a2e;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            color: #666;
+            font-size: 1rem;
+        }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+            pointer-events: auto !important;
+        }
+        
+        .stats-grid * {
+            pointer-events: auto !important;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            pointer-events: auto !important;
+        }
+        
+        .stat-card * {
+            pointer-events: auto !important;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+
+        .stat-card .icon {
+            font-size: 3rem;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a2e;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .label {
+            color: #666;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        /* Content Section */
+        .content-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .content-section h3 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+
+        /* Welcome Message */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .welcome-message .icon {
+            font-size: 4rem;
+            margin-bottom: 15px;
+        }
+
+        .welcome-message h3 {
+            color: #1a1a2e;
+            margin-bottom: 10px;
+        }
+
+        .welcome-message p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Form Elements */
+        .form-input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        /* Buttons */
+        .btn-primary {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Loading Spinner */
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            font-size: 3rem;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">
+            <h1>🛡️ Admin Portal</h1>
+            <p>Student Attendance Management</p>
+        </div>
+        <div class="header-right">
+            <span class="admin-badge" id="adminName">Administrator</span>
+            <button class="btn-logout" onclick="logout()">Logout</button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Dashboard Page -->
+        <div id="dashboardPage">
+            <div class="page-header">
+                <h2>Dashboard Overview</h2>
+                <p>Welcome to the Admin Control Panel</p>
+            </div>
+
+            <!-- Statistics Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon">👨‍🏫</div>
+                    <div class="value" id="totalFaculty">0</div>
+                    <div class="label">Total Faculty</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">👨‍🎓</div>
+                    <div class="value" id="totalStudents">0</div>
+                    <div class="label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📊</div>
+                    <div class="value" id="totalSheets">0</div>
+                    <div class="label">Attendance Sheets</div>
+                </div>
+            </div>
+
+            <!-- Welcome Section -->
+            <div class="content-section">
+                <div class="welcome-message">
+                    <div class="icon">🎓</div>
+                    <h3>Welcome to Admin Portal</h3>
+                    <p>Use the Quick Actions below to navigate through different sections.<br>
+                    Monitor attendance records, manage faculty data, and oversee system operations.</p>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="content-section">
+                <h3>Quick Actions</h3>
+                <div class="stats-grid" id="quickActionsGrid">
+                    <div class="stat-card" id="qa-dashboard">
+                        <div class="icon">📊</div>
+                        <div class="label">Dashboard</div>
+                    </div>
+                    <div class="stat-card" id="qa-viewAttendance">
+                        <div class="icon">👁️</div>
+                        <div class="label">View Attendance</div>
+                    </div>
+                    <div class="stat-card" id="qa-addSubjects">
+                        <div class="icon">📚</div>
+                        <div class="label">Add Subjects</div>
+                    </div>
+                    <div class="stat-card" id="qa-addStudents">
+                        <div class="icon">👨‍🎓</div>
+                        <div class="label">Add Students</div>
+                    </div>
+                    <div class="stat-card" id="qa-generateReports">
+                        <div class="icon">📊</div>
+                        <div class="label">Generate Reports</div>
+                    </div>
+                    <div class="stat-card" id="qa-settings">
+                        <div class="icon">⚙️</div>
+                        <div class="label">System Settings</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Attendance Page -->
+        <div id="viewAttendancePage" class="hidden">
+            <div class="page-header">
+                <h2>📋 View Attendance Records</h2>
+                <p>Faculty-wise attendance overview and detailed records</p>
+            </div>
+
+            <!-- Filter Section -->
+            <div class="content-section">
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block;">📅 Select Date:</label>
+                    <input type="date" id="viewAttendanceDate" class="form-input" style="max-width: 300px;" onchange="updateViewDisplay()">
+                    <p style="margin-top: 8px; font-size: 0.85rem; color: #666;">Select a date to view attendance taken on that specific day</p>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block;">📅 Year:</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="viewYearOptions">
+                        <div class="stat-card" style="padding: 15px; min-width: 100px;" data-year="2" onclick="selectViewYear(2)">II Year</div>
+                        <div class="stat-card" style="padding: 15px; min-width: 100px;" data-year="3" onclick="selectViewYear(3)">III Year</div>
+                        <div class="stat-card active" style="padding: 15px; min-width: 100px; background: #667eea; color: white;" data-year="4" onclick="selectViewYear(4)">IV Year</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <label style="font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block;">📚 Semester:</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;" id="viewSemOptions">
+                        <div class="stat-card" style="padding: 15px; min-width: 120px;" data-sem="1" onclick="selectViewSem(1)">Semester 1</div>
+                        <div class="stat-card active" style="padding: 15px; min-width: 120px; background: #667eea; color: white;" data-sem="2" onclick="selectViewSem(2)">Semester 2</div>
+                    </div>
+                </div>
+
+                <div>
+                    <label style="font-size: 0.9rem; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block;">📖 Subject:</label>
+                    <select id="viewSubjectSelect" onchange="filterViewBySubject()" class="form-input" style="max-width: 400px;">
+                        <option value="all">All Subjects</option>
+                    </select>
+                </div>
+
+                <!-- Generate Report Button -->
+                <div style="margin-top: 20px;">
+                    <button onclick="generateViewAttendanceReport()" class="btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 12px 30px; font-size: 1rem;">
+                        📊 Generate Attendance Report
+                    </button>
+                    <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+                        Generate an Excel report for the current selection: 
+                        <span id="reportSelectionInfo" style="font-weight: 600; color: #667eea;">IV Year - Sem 2 - All Subjects</span>
+                    </p>
+                </div>
+
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 10px; font-weight: 600; display: inline-flex; align-items: center; gap: 10px; margin-top: 15px;">
+                    <span>📊</span>
+                    <span id="viewCurrentSelection">IV Year - Semester 2 (4-2)</span>
+                </div>
+
+                <!-- Date Range Report Section -->
+                <div style="margin-top: 30px; padding: 25px; background: #f8f9ff; border-radius: 12px; border: 2px solid #667eea;">
+                    <h3 style="margin-bottom: 20px; color: #333; display: flex; align-items: center; gap: 10px;">
+                        📊 Generate Date Range Attendance Report
+                    </h3>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">📅 From Date:</label>
+                            <input type="date" id="rangeFromDate" class="form-input" style="width: 100%;">
+                        </div>
+                        <div>
+                            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #555;">📅 To Date:</label>
+                            <input type="date" id="rangeToDate" class="form-input" style="width: 100%;">
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display: block; margin-bottom: 12px; font-weight: 600; color: #555;">👨‍🏫 Select Faculty (Multiple Selection):</label>
+                        <div id="rangeFacultyCheckboxes" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; max-height: 300px; overflow-y: auto; padding: 15px; background: white; border-radius: 8px; border: 1px solid #ddd;">
+                            <p style="text-align: center; color: #666; grid-column: 1/-1;">Select year and semester first</p>
+                        </div>
+                        <div style="margin-top: 10px; display: flex; gap: 10px;">
+                            <button onclick="selectAllRangeFaculty()" class="btn-primary" style="padding: 8px 20px; font-size: 0.85rem; background: #28a745;">
+                                ✓ Select All
+                            </button>
+                            <button onclick="deselectAllRangeFaculty()" class="btn-primary" style="padding: 8px 20px; font-size: 0.85rem; background: #6c757d;">
+                                ✗ Deselect All
+                            </button>
+                        </div>
+                    </div>
+
+                    <button onclick="generateDateRangeReport()" class="btn-primary" style="width: 100%; padding: 15px; font-size: 1.1rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                        📥 Generate & Download Date Range Report
+                    </button>
+                    <p style="margin-top: 10px; font-size: 0.85rem; color: #666; text-align: center;">
+                        Report will include: Classes Conducted, Students Attended, and Average Attendance
+                    </p>
+                </div>
+            </div>
+
+            <!-- Stats Cards -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="icon">👨‍🏫</div>
+                    <div class="value" id="viewTotalFaculty">-</div>
+                    <div class="label">Total Faculty</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">👨‍🎓</div>
+                    <div class="value" id="viewTotalStudents">-</div>
+                    <div class="label">Total Students</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📊</div>
+                    <div class="value" id="viewTotalSheets">-</div>
+                    <div class="label">Attendance Sheets</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon">📅</div>
+                    <div class="value" id="viewDateRange">-</div>
+                    <div class="label">Academic Period</div>
+                </div>
+            </div>
+
+            <!-- Faculty Grid -->
+            <div class="content-section">
+                <h3 style="margin-bottom: 20px;">📋 Faculty Attendance Overview - <span id="viewSectionTitle">4-2</span></h3>
+                <div id="viewFacultyGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <div style="text-align: center; padding: 40px; color: #666; grid-column: 1/-1;">
+                        <span class="spinner">⏳</span>
+                        <p>Loading faculty data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Subjects Page -->
+        <div id="addSubjectsPage" class="hidden">
+            <div class="page-header">
+                <h2>📚 Manage Subjects & Faculty</h2>
+                <p>Create subjects and assign faculty members</p>
+            </div>
+
+            <div class="content-section">
+                <!-- Step 1: Semester Selection -->
+                <h3>📚 Step 1: Select Semester</h3>
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card" onclick="selectAddSubjectSemester('2-2')">
+                        <div class="icon">📖</div>
+                        <div class="label">2-2</div>
+                    </div>
+                    <div class="stat-card" onclick="selectAddSubjectSemester('3-2')">
+                        <div class="icon">📗</div>
+                        <div class="label">3-2</div>
+                    </div>
+                    <div class="stat-card" onclick="selectAddSubjectSemester('4-2')">
+                        <div class="icon">📘</div>
+                        <div class="label">4-2</div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Show Existing Subjects or Create New -->
+                <div class="hidden" id="subjectListSection">
+                    <h3>📋 Step 2: Subjects for <span id="selectedSemesterLabel"></span></h3>
+                    <div id="existingSubjectsList" style="margin-bottom: 20px;"></div>
+                    
+                    <div style="border-top: 2px dashed #667eea; padding-top: 20px; margin-top: 20px;">
+                        <h4>➕ Create New Subject</h4>
+                        <input type="text" id="newSubjectNameInput" class="form-input" placeholder="Enter new subject name (e.g., Machine Learning)">
+                        <button onclick="createNewSubject()" id="createSubjectBtn" class="btn-primary" style="margin-top: 10px;">
+                            ➕ Create Subject
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Select Subject to Assign Faculty -->
+                <div class="hidden" id="selectSubjectSection">
+                    <h3>📝 Step 3: Select Subject to Assign Faculty</h3>
+                    <select id="subjectDropdown" class="form-input" onchange="handleSubjectSelection()">
+                        <option value="">-- Select a Subject --</option>
+                    </select>
+                </div>
+
+                <!-- Step 4: New Faculty Creation (Optional) -->
+                <div class="hidden" id="newFacultySection">
+                    <h3 style="display: flex; justify-content: space-between; align-items: center;">
+                        <span>➕ Step 4a: Create New Faculty (Optional)</span>
+                        <button onclick="toggleNewFacultyForm()" id="toggleFacultyBtn" class="btn-primary" style="font-size: 0.85rem; padding: 8px 15px;">
+                            Show Form
+                        </button>
+                    </h3>
+                    
+                    <div id="newFacultyForm" style="display: none; margin-top: 15px; padding: 20px; background: #f8f9ff; border-radius: 8px; border: 2px solid #667eea;">
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Faculty ID</label>
+                            <input type="text" id="newFacultyId" class="form-input" placeholder="e.g., FAC123">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Faculty Name</label>
+                            <input type="text" id="newFacultyName" class="form-input" placeholder="e.g., Dr. John Smith">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Department</label>
+                            <input type="text" id="newFacultyDept" class="form-input" placeholder="e.g., CSE(DS)">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 600;">Password</label>
+                            <input type="password" id="newFacultyPassword" class="form-input" placeholder="Enter faculty password">
+                        </div>
+                        <button onclick="addNewFacultyToList()" class="btn-primary" style="width: 100%; background: #28a745;">
+                            ➕ Add This Faculty to List
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 5: Faculty Selection -->
+                <div class="hidden" id="addSubjectFacultySection">
+                    <h3>👨‍🏫 Step 4b: Select Faculty for <span id="selectedSubjectLabel"></span></h3>
+                    <p style="margin-bottom: 15px; color: #666;">Select one or more faculty members to assign this subject</p>
+                    <div id="facultyCheckboxList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+
+                <!-- Manage Existing Faculty Assignments -->
+                <div class="hidden" id="manageFacultySection">
+                    <h3>🗑️ Manage Faculty Assignments for <span id="manageFacultySubjectLabel"></span></h3>
+                    <p style="margin-bottom: 15px; color: #666;">Remove faculty assignments from this subject</p>
+                    <div id="assignedFacultyList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+                </div>
+
+                <!-- Submit Button -->
+                <div id="addSubjectButtonSection" class="hidden" style="margin-top: 20px;">
+                    <button class="btn-primary" onclick="submitFacultyAssignment()" id="addSubjectBtn">
+                        ✅ Assign Faculty to Subject
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Students Page -->
+        <div id="addStudentsPage" class="hidden">
+            <div class="page-header">
+                <h2>👨‍🎓 Add Students</h2>
+                <p>Add students to a specific subject and faculty</p>
+            </div>
+
+            <div class="content-section">
+                <!-- Semester Selection -->
+                <h3>📚 Select Semester</h3>
+                <div class="stats-grid" style="margin-bottom: 30px;">
+                    <div class="stat-card" onclick="selectAddStudentSemester('2-2')">
+                        <div class="icon">📖</div>
+                        <div class="label">2-2</div>
+                    </div>
+                    <div class="stat-card" onclick="selectAddStudentSemester('3-2')">
+                        <div class="icon">📗</div>
+                        <div class="label">3-2</div>
+                    </div>
+                    <div class="stat-card" onclick="selectAddStudentSemester('4-2')">
+                        <div class="icon">📘</div>
+                        <div class="label">4-2</div>
+                    </div>
+                </div>
+
+                <!-- Subject Selection -->
+                <div class="hidden" id="addStudentSubjectSection">
+                    <h3>📝 Select Subject</h3>
+                    <div class="stats-grid" id="addStudentSubjectOptions"></div>
+                </div>
+
+                <!-- Faculty Selection -->
+                <div class="hidden" id="addStudentFacultySection">
+                    <h3>👨‍🏫 Select Faculty</h3>
+                    <select class="form-input" id="addStudentFacultySelect">
+                        <option value="">-- Select Faculty --</option>
+                    </select>
+                </div>
+
+                <!-- Student Input -->
+                <div class="hidden" id="studentInputSection" style="margin-top: 20px;">
+                    <h3>📋 Student Details</h3>
+                    
+                    <!-- Upload Excel Option -->
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 1.5rem;">📤</span>
+                            Upload Student List (Excel)
+                        </h4>
+                        <p style="margin: 0 0 15px 0; font-size: 0.9rem; opacity: 0.9;">
+                            Upload an Excel file containing student list. The sheet will extract Roll No and Name columns.
+                        </p>
+                        <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="studentExcelFile" accept=".xlsx,.xls" 
+                                   style="background: white; color: #333; padding: 10px; border-radius: 6px; border: none; flex: 1; min-width: 200px;"
+                                   onchange="handleStudentExcelUpload(event)">
+                            <button class="btn-primary" onclick="document.getElementById('studentExcelFile').click()" 
+                                    style="background: rgba(255,255,255,0.2); border: 2px solid white; color: white; padding: 10px 20px;">
+                                📁 Choose File
+                            </button>
+                        </div>
+                        <div id="excelUploadStatus" style="margin-top: 10px; font-size: 0.85rem;"></div>
+                    </div>
+                    
+                    <!-- Manual Input Option -->
+                    <div style="background: #f8f9ff; padding: 20px; border-radius: 12px; border: 2px dashed #667eea;">
+                        <h4 style="margin: 0 0 15px 0; color: #667eea;">✍️ Or Add Students Manually</h4>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <input type="text" id="studentRollNo" class="form-input" placeholder="Roll Number (e.g., 23091A3201)">
+                            <input type="text" id="studentName" class="form-input" placeholder="Student Name">
+                            <button class="btn-primary" onclick="addStudentToList()">➕ Add</button>
+                        </div>
+                    </div>
+                    
+                    <div id="studentsList" style="margin-top: 20px;"></div>
+                </div>
+
+                <!-- Submit Buttons -->
+                <div id="addStudentButtonSection" class="hidden" style="margin-top: 20px;">
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                        <button class="btn-primary" onclick="submitNewStudents()" id="addStudentsBtn">
+                            ➕ Add Students (Append to Existing)
+                        </button>
+                        <button class="btn-primary" onclick="replaceAllStudents()" id="replaceStudentsBtn"
+                                style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            🔄 Replace All Students (Clear & Update)
+                        </button>
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.85rem; color: #666;">
+                        <strong>➕ Add:</strong> Adds new students while keeping existing ones and their attendance.<br>
+                        <strong>🔄 Replace:</strong> Removes all existing students and adds new ones (attendance data will be lost).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generate Reports Modal -->
+    <div id="generateReportModal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000;">
+        <div style="background: white; border-radius: 15px; padding: 30px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2 style="margin: 0; color: #333;">📊 Generate Reports</h2>
+                <button onclick="closeReportModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">✕</button>
+            </div>
+            
+            <!-- Report Type Selection -->
+            <div style="margin-bottom: 25px;">
+                <label style="display: block; font-weight: 700; margin-bottom: 10px; color: #667eea;">Select Report Type:</label>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="selectReportType('semester')" id="reportTypeSemester" class="btn-primary" style="flex: 1;">
+                        📅 Semester-wise
+                    </button>
+                    <button onclick="selectReportType('subject')" id="reportTypeSubject" class="btn-primary" style="flex: 1; background: #6c757d;">
+                        📚 Subject-wise
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Semester-wise Report Options -->
+            <div id="semesterReportSection">
+                <h3 style="margin-bottom: 15px; color: #333;">Select Semesters:</h3>
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <label style="display: flex; align-items: center; padding: 12px; background: #f8f9ff; border-radius: 8px; cursor: pointer;">
+                        <input type="checkbox" value="2-2" class="semester-checkbox" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 600;">Semester 2-2 (II Year - Sem 2)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; padding: 12px; background: #f8f9ff; border-radius: 8px; cursor: pointer;">
+                        <input type="checkbox" value="3-2" class="semester-checkbox" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 600;">Semester 3-2 (III Year - Sem 2)</span>
+                    </label>
+                    <label style="display: flex; align-items: center; padding: 12px; background: #f8f9ff; border-radius: 8px; cursor: pointer;">
+                        <input type="checkbox" value="4-2" class="semester-checkbox" style="margin-right: 10px; width: 18px; height: 18px;">
+                        <span style="font-weight: 600;">Semester 4-2 (IV Year - Sem 2)</span>
+                    </label>
+                </div>
+                <button onclick="generateSemesterReport()" class="btn-primary" style="width: 100%; margin-top: 20px; background: #28a745;">
+                    ⬇️ Download Semester Report
+                </button>
+            </div>
+            
+            <!-- Subject-wise Report Options -->
+            <div id="subjectReportSection" class="hidden">
+                <h3 style="margin-bottom: 15px; color: #333;">Select Semester & Subject:</h3>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Semester:</label>
+                    <select id="subjectReportSemester" class="form-input" onchange="loadSubjectsForReport()">
+                        <option value="">-- Select Semester --</option>
+                        <option value="2-2">Semester 2-2</option>
+                        <option value="3-2">Semester 3-2</option>
+                        <option value="4-2">Semester 4-2</option>
+                    </select>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Subject:</label>
+                    <select id="subjectReportSubject" class="form-input">
+                        <option value="">-- Select Subject --</option>
+                    </select>
+                </div>
+                <button onclick="generateSubjectReport()" class="btn-primary" style="width: 100%; margin-top: 20px; background: #28a745;">
+                    ⬇️ Download Subject Report
+                </button>
+            </div>
+            
+            <div id="reportLoadingMessage" class="hidden" style="text-align: center; padding: 20px; margin-top: 20px; background: #e3f2fd; border-radius: 8px;">
+                <div style="font-size: 2rem; margin-bottom: 10px;">⏳</div>
+                <p style="margin: 0; font-weight: 600; color: #1976d2;">Generating report... Please wait</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="hidden" style="position: fixed; top: 20px; right: 20px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 2000; min-width: 300px; display: flex; align-items: center; gap: 10px;">
+        <span id="toastIcon" style="font-size: 1.5rem;"></span>
+        <span id="toastMessage" style="flex: 1; font-weight: 600;"></span>
+        <button onclick="hideToast()" style="background: none; border: none; cursor: pointer; font-size: 1.2rem; color: #666;">✕</button>
+    </div>
+
+    <!-- Sheet Viewer Modal -->
+    <div id="sheetViewerModal" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 2500; padding: 20px;">
+        <div style="background: white; border-radius: 15px; width: 95%; max-width: 1400px; height: 90vh; display: flex; flex-direction: column; box-shadow: 0 10px 40px rgba(0,0,0,0.3);">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 20px 30px; border-bottom: 2px solid #e0e0e0;">
+                <div>
+                    <h2 style="margin: 0; color: #333;">📊 Attendance Sheet</h2>
+                    <p id="sheetViewerTitle" style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;"></p>
+                </div>
+                <button onclick="closeSheetViewer()" style="background: #e74c3c; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600;">
+                    ✕ Close
+                </button>
+            </div>
+            <div id="sheetViewerContent" style="flex: 1; overflow: auto; padding: 20px;">
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <div class="spinner" style="margin: 0 auto 15px;"></div>
+                    <p>Loading sheet data...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 3000;">
+        <div style="background: white; padding: 30px 40px; border-radius: 15px; text-align: center;">
+            <div class="spinner" style="font-size: 3rem; margin-bottom: 15px;">⏳</div>
+            <p id="loadingMessage" style="margin: 0; font-size: 1.1rem; font-weight: 600; color: #333;">Loading...</p>
+        </div>
+    </div>
+
+    <script>
+        console.log('=== New Admin Portal Loading ===');
+        
+        const API_BASE = 'http://localhost:3000';
+
+        // ===== HELPER FUNCTIONS - UI FEEDBACK =====
+        
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toastNotification');
+            const icon = document.getElementById('toastIcon');
+            const msg = document.getElementById('toastMessage');
+            
+            // Set icon and color based on type
+            const types = {
+                success: { icon: '✅', color: '#28a745' },
+                error: { icon: '❌', color: '#e74c3c' },
+                warning: { icon: '⚠️', color: '#ff9800' },
+                info: { icon: 'ℹ️', color: '#3498db' }
+            };
+            
+            const config = types[type] || types.info;
+            icon.textContent = config.icon;
+            msg.textContent = message;
+            toast.style.borderLeft = `5px solid ${config.color}`;
+            
+            toast.classList.remove('hidden');
+            
+            // Auto-hide after 4 seconds
+            setTimeout(() => {
+                hideToast();
+            }, 4000);
+        }
+        
+        window.hideToast = function() {
+            document.getElementById('toastNotification').classList.add('hidden');
+        };
+        
+        function showLoading(message = 'Loading...') {
+            document.getElementById('loadingMessage').textContent = message;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        // ===== CRITICAL FUNCTIONS - DEFINED FIRST =====
+        
+        // Authentication Check - DISABLED for direct access
+        function checkAuth() {
+            // Set default admin name if no session exists
+            const adminSession = sessionStorage.getItem('adminSession');
+            if (!adminSession) {
+                // Create a default session for direct access
+                const defaultAdmin = {
+                    id: 'ADMIN001',
+                    name: 'System Administrator',
+                    role: 'admin'
+                };
+                sessionStorage.setItem('adminSession', JSON.stringify(defaultAdmin));
+                document.getElementById('adminName').textContent = defaultAdmin.name;
+            } else {
+                const admin = JSON.parse(adminSession);
+                document.getElementById('adminName').textContent = admin.name;
+            }
+            return true;
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                sessionStorage.removeItem('adminSession');
+                window.location.href = 'admin-login.html';
+            }
+        }
+
+        // Page Navigation
+        function showPage(page) {
+            console.log('Navigating to:', page);
+            
+            const pages = {
+                dashboard: document.getElementById('dashboardPage'),
+                viewAttendance: document.getElementById('viewAttendancePage'),
+                addSubjects: document.getElementById('addSubjectsPage'),
+                addStudents: document.getElementById('addStudentsPage')
+            };
+            
+            // Hide all pages
+            Object.values(pages).forEach(p => {
+                if (p) p.classList.add('hidden');
+            });
+            
+            // Show target page
+            const targetPage = pages[page] || pages.dashboard;
+            if (targetPage) {
+                targetPage.classList.remove('hidden');
+                
+                // Update URL hash
+                window.location.hash = page !== 'dashboard' ? page : '';
+                
+                // Load data
+                if (page === 'dashboard') {
+                    loadStats();
+                } else if (page === 'viewAttendance') {
+                    loadViewAttendanceData();
+                }
+                
+                window.scrollTo(0, 0);
+            }
+        }
+
+        // Make functions globally available
+        window.showPage = showPage;
+        window.logout = logout;
+        window.checkAuth = checkAuth;
+
+        // ===== QUICK ACTIONS SETUP =====
+        
+        function setupQuickActions() {
+            console.log('Setting up Quick Actions...');
+            
+            const quickActions = [
+                { id: 'qa-dashboard', action: 'dashboard', type: 'page' },
+                { id: 'qa-viewAttendance', action: 'viewAttendance', type: 'page' },
+                { id: 'qa-addSubjects', action: 'addSubjects', type: 'page' },
+                { id: 'qa-addStudents', action: 'addStudents', type: 'page' },
+                { id: 'qa-generateReports', action: 'openReportModal', type: 'function' },
+                { id: 'qa-settings', action: 'dashboard', type: 'page' }
+            ];
+            
+            quickActions.forEach(qa => {
+                const element = document.getElementById(qa.id);
+                if (element) {
+                    element.addEventListener('click', function() {
+                        console.log('Quick Action clicked:', qa.action);
+                        if (qa.type === 'page') {
+                            showPage(qa.action);
+                        } else if (qa.action === 'openReportModal') {
+                            openReportModal();
+                        }
+                    });
+                    console.log('✓ Quick Action setup:', qa.id);
+                }
+            });
+            
+            console.log('Quick Actions setup complete!');
+        }
+
+        // ===== GENERATE REPORTS FUNCTIONS =====
+        
+        let reportModalState = {
+            reportType: 'semester'
+        };
+
+        window.openReportModal = function() {
+            document.getElementById('generateReportModal').classList.remove('hidden');
+            selectReportType('semester');
+        };
+
+        window.closeReportModal = function() {
+            document.getElementById('generateReportModal').classList.add('hidden');
+            // Reset selections
+            document.querySelectorAll('.semester-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('subjectReportSemester').value = '';
+            document.getElementById('subjectReportSubject').value = '';
+            document.getElementById('reportLoadingMessage').classList.add('hidden');
+        };
+
+        window.selectReportType = function(type) {
+            reportModalState.reportType = type;
+            
+            // Update button styles
+            const semesterBtn = document.getElementById('reportTypeSemester');
+            const subjectBtn = document.getElementById('reportTypeSubject');
+            
+            if (type === 'semester') {
+                semesterBtn.style.background = '#667eea';
+                subjectBtn.style.background = '#6c757d';
+                document.getElementById('semesterReportSection').classList.remove('hidden');
+                document.getElementById('subjectReportSection').classList.add('hidden');
+            } else {
+                semesterBtn.style.background = '#6c757d';
+                subjectBtn.style.background = '#667eea';
+                document.getElementById('semesterReportSection').classList.add('hidden');
+                document.getElementById('subjectReportSection').classList.remove('hidden');
+            }
+        };
+
+        window.generateSemesterReport = async function() {
+            // Get selected semesters
+            const checkboxes = document.querySelectorAll('.semester-checkbox:checked');
+            const selectedSemesters = Array.from(checkboxes).map(cb => cb.value);
+            
+            if (selectedSemesters.length === 0) {
+                showToast('Please select at least one semester', 'warning');
+                return;
+            }
+            
+            try {
+                // Show loading
+                showLoading('Generating semester report...');
+                document.getElementById('reportLoadingMessage').classList.remove('hidden');
+                
+                const response = await fetch(`${API_BASE}/api/admin/generate-combined-report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ semesters: selectedSemesters })
+                });
+                
+                if (response.ok) {
+                    // Get the blob data
+                    const blob = await response.blob();
+                    
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `Combined_Attendance_Report_${Date.now()}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showToast('Report downloaded successfully!', 'success');
+                    closeReportModal();
+                } else {
+                    const result = await response.json();
+                    showToast('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error generating semester report:', error);
+                showToast('Error generating report. Please try again.', 'error');
+            } finally {
+                hideLoading();
+                document.getElementById('reportLoadingMessage').classList.add('hidden');
+            }
+        };
+
+        window.loadSubjectsForReport = async function() {
+            const semester = document.getElementById('subjectReportSemester').value;
+            const subjectSelect = document.getElementById('subjectReportSubject');
+            
+            if (!semester) {
+                subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>';
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/subjects/list?semester=${semester}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    const subjects = result.data || [];
+                    subjectSelect.innerHTML = '<option value="">-- Select Subject --</option>' +
+                        subjects.map(subject => `<option value="${subject}">${subject}</option>`).join('');
+                } else {
+                    alert('Error loading subjects: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+                alert('Error loading subjects. Please try again.');
+            }
+        };
+
+        window.generateSubjectReport = async function() {
+            const semester = document.getElementById('subjectReportSemester').value;
+            const subject = document.getElementById('subjectReportSubject').value;
+            
+            if (!semester || !subject) {
+                showToast('Please select both semester and subject', 'warning');
+                return;
+            }
+            
+            try {
+                // Show loading
+                showLoading('Generating subject report...');
+                document.getElementById('reportLoadingMessage').classList.remove('hidden');
+                
+                const response = await fetch(`${API_BASE}/api/admin/generate-subject-report`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ semester, subject })
+                });
+                
+                if (response.ok) {
+                    // Get the blob data
+                    const blob = await response.blob();
+                    
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${subject.replace(/\s+/g, '_')}_${semester}_Report_${Date.now()}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    showToast('Subject report downloaded successfully!', 'success');
+                    closeReportModal();
+                } else {
+                    const result = await response.json();
+                    showToast('Error: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error('Error generating subject report:', error);
+                showToast('Error generating report. Please try again.', 'error');
+            } finally {
+                hideLoading();
+                document.getElementById('reportLoadingMessage').classList.add('hidden');
+            }
+        };
+
+        // ===== DATA LOADING =====
+        
+        async function loadStats() {
+            console.log('Loading dashboard stats...');
+            try {
+                // Fetch attendance sheets
+                const sheetsResponse = await fetch(`${API_BASE}/api/admin/all-sheets`);
+                if (!sheetsResponse.ok) {
+                    console.error('Failed to fetch sheets:', sheetsResponse.status);
+                    return;
+                }
+                const sheetsResult = await sheetsResponse.json();
+                console.log('Sheets API response:', sheetsResult);
+                
+                // Fetch faculty list - use full-list to get all faculty with details
+                const facultyResponse = await fetch(`${API_BASE}/api/faculty/full-list`);
+                if (!facultyResponse.ok) {
+                    console.error('Failed to fetch faculty:', facultyResponse.status);
+                    return;
+                }
+                const facultyResult = await facultyResponse.json();
+                console.log('Faculty API response:', facultyResult);
+                
+                // Validate API response structure
+                if (!sheetsResult.success || !facultyResult.success) {
+                    console.error('API returned error');
+                    return;
+                }
+                
+                // Extract data from API response
+                const sheetsData = sheetsResult.data || {};
+                const faculties = facultyResult.data || [];
+                
+                console.log('Sheets data:', Object.keys(sheetsData).length, 'keys');
+                console.log('Faculty count:', faculties.length);
+                
+                // Use server values for sheets and faculty
+                const totalSheets = sheetsResult.totalSheets || 0;
+                const totalFaculty = faculties.length;
+                
+                // Count UNIQUE students by roll number (don't count duplicates across subjects)
+                const uniqueStudents = new Set();
+                Object.values(sheetsData).forEach(sheet => {
+                    if (sheet.students && Array.isArray(sheet.students)) {
+                        sheet.students.forEach(student => {
+                            if (student['Roll No']) {
+                                uniqueStudents.add(student['Roll No']);
+                            }
+                        });
+                    }
+                });
+                const totalStudents = uniqueStudents.size;
+                
+                console.log('Server provided - Sheets:', totalSheets);
+                console.log('Unique students calculated:', totalStudents);
+                
+                // Calculate average attendance from sheets data
+                let totalAttendancePercentage = 0;
+                let studentCount = 0;
+                
+                Object.values(sheetsData).forEach(sheet => {
+                    if (sheet.students && Array.isArray(sheet.students)) {
+                        sheet.students.forEach(student => {
+                            // Parse percentage like "85.5%"
+                            if (student.percentage) {
+                                const pct = parseFloat(String(student.percentage).replace('%', ''));
+                                if (!isNaN(pct)) {
+                                    totalAttendancePercentage += pct;
+                                    studentCount++;
+                                }
+                            }
+                        });
+                    }
+                });
+                
+                const avgAttendance = studentCount > 0 
+                    ? (totalAttendancePercentage / studentCount).toFixed(1)
+                    : '0.0';
+                
+                // Update UI
+                document.getElementById('totalFaculty').textContent = totalFaculty;
+                document.getElementById('totalStudents').textContent = totalStudents;
+                document.getElementById('totalSheets').textContent = totalSheets;
+                document.getElementById('avgAttendance').textContent = avgAttendance + '%';
+                
+                console.log('✓ Dashboard stats updated:', {
+                    faculty: totalFaculty,
+                    students: totalStudents,
+                    sheets: totalSheets,
+                    avgAttendance: avgAttendance + '%'
+                });
+            } catch (error) {
+                console.error('Error loading dashboard stats:', error);
+            }
+        }
+
+        // View Attendance Page State
+        let viewCurrentYear = 4;
+        let viewCurrentSem = 2;
+        let allSheetsData = {};
+        let allFacultyList = [];
+
+        async function reloadFacultyList() {
+            try {
+                const facultyResponse = await fetch(`${API_BASE}/api/faculty/full-list`);
+                if (facultyResponse.ok) {
+                    const facultyResult = await facultyResponse.json();
+                    if (facultyResult.success) {
+                        allFacultyList = facultyResult.data || [];
+                        console.log('Reloaded faculty list:', allFacultyList.length, 'faculty');
+                    }
+                }
+            } catch (error) {
+                console.error('Error reloading faculty list:', error);
+            }
+        }
+
+        async function loadViewAttendanceData() {
+            console.log('Loading view attendance data...');
+            try {
+                // Fetch all sheets data
+                const sheetsResponse = await fetch(`${API_BASE}/api/admin/all-sheets`);
+                if (!sheetsResponse.ok) {
+                    console.error('Failed to fetch sheets:', sheetsResponse.status);
+                    return;
+                }
+                const sheetsResult = await sheetsResponse.json();
+                
+                if (sheetsResult.success) {
+                    allSheetsData = sheetsResult.data || {};
+                    console.log('Loaded sheets data:', Object.keys(allSheetsData).length, 'sheets');
+                }
+                
+                // Fetch faculty list
+                const facultyResponse = await fetch(`${API_BASE}/api/faculty/full-list`);
+                if (!facultyResponse.ok) {
+                    console.error('Failed to fetch faculty:', facultyResponse.status);
+                    return;
+                }
+                const facultyResult = await facultyResponse.json();
+                
+                if (facultyResult.success) {
+                    allFacultyList = facultyResult.data || [];
+                    console.log('Loaded faculty list:', allFacultyList.length, 'faculty');
+                    
+                    // Set default date to today
+                    const today = new Date();
+                    const dateString = today.toISOString().split('T')[0];
+                    document.getElementById('viewAttendanceDate').value = dateString;
+                    
+                    // Set default date range (last 7 days)
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    document.getElementById('rangeFromDate').value = weekAgo.toISOString().split('T')[0];
+                    document.getElementById('rangeToDate').value = dateString;
+                    
+                    // Populate subject dropdown
+                    populateViewSubjectDropdown();
+                    
+                    // Populate faculty checkboxes for date range report
+                    populateRangeFacultyCheckboxes();
+                }
+                
+                // Update display
+                updateViewDisplay();
+                
+            } catch (error) {
+                console.error('Error loading view attendance data:', error);
+                document.getElementById('viewFacultyGrid').innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #e74c3c; grid-column: 1/-1;">
+                        <span style="font-size: 2rem;">⚠️</span>
+                        <p>Error loading data: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        function populateViewSubjectDropdown() {
+            const select = document.getElementById('viewSubjectSelect');
+            const currentSemester = `${viewCurrentYear}-${viewCurrentSem}`;
+            
+            // Get unique subjects for current semester
+            const subjects = new Set();
+            allFacultyList.forEach(faculty => {
+                if (faculty.semester === currentSemester) {
+                    subjects.add(faculty.subject);
+                }
+            });
+            
+            // Clear and populate dropdown
+            select.innerHTML = '<option value="all">All Subjects</option>';
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                select.appendChild(option);
+            });
+        }
+
+        function selectViewYear(year) {
+            viewCurrentYear = year;
+            
+            // Update UI - remove active from all, add to selected
+            document.querySelectorAll('#viewYearOptions .stat-card').forEach(card => {
+                card.classList.remove('active');
+                card.style.background = '';
+                card.style.color = '';
+            });
+            event.target.classList.add('active');
+            event.target.style.background = '#667eea';
+            event.target.style.color = 'white';
+            
+            populateViewSubjectDropdown();
+            updateViewDisplay();
+            populateRangeFacultyCheckboxes(); // Update faculty list for date range report
+        }
+
+        function selectViewSem(sem) {
+            viewCurrentSem = sem;
+            
+            // Update UI - remove active from all, add to selected
+            document.querySelectorAll('#viewSemOptions .stat-card').forEach(card => {
+                card.classList.remove('active');
+                card.style.background = '';
+                card.style.color = '';
+            });
+            event.target.classList.add('active');
+            event.target.style.background = '#667eea';
+            event.target.style.color = 'white';
+            
+            populateViewSubjectDropdown();
+            updateViewDisplay();
+            populateRangeFacultyCheckboxes(); // Update faculty list for date range report
+        }
+
+        function filterViewBySubject() {
+            updateViewDisplay();
+            populateRangeFacultyCheckboxes(); // Update faculty list when subject changes
+        }
+
+        async function updateViewDisplay() {
+            const currentSemester = `${viewCurrentYear}-${viewCurrentSem}`;
+            const selectedSubject = document.getElementById('viewSubjectSelect').value;
+            const selectedDate = document.getElementById('viewAttendanceDate').value;
+            
+            console.log('Updating view display:', currentSemester, selectedSubject, selectedDate);
+            
+            // Update current selection display
+            const yearNames = { 2: 'II', 3: 'III', 4: 'IV' };
+            document.getElementById('viewCurrentSelection').textContent = 
+                `${yearNames[viewCurrentYear]} Year - Semester ${viewCurrentSem} (${currentSemester})`;
+            document.getElementById('viewSectionTitle').textContent = currentSemester;
+            
+            // Filter faculty for current semester
+            let filteredFaculty = allFacultyList.filter(f => f.semester === currentSemester);
+            
+            // Apply subject filter if not "all"
+            if (selectedSubject !== 'all') {
+                filteredFaculty = filteredFaculty.filter(f => f.subject === selectedSubject);
+            }
+            
+            console.log('Filtered faculty:', filteredFaculty.length);
+            
+            // Calculate stats
+            const uniqueStudents = new Set();
+            let totalSheets = 0;
+            
+            filteredFaculty.forEach(faculty => {
+                const sheetKey = `${faculty.id}_${faculty.semester}_${faculty.subject}`;
+                if (allSheetsData[sheetKey]) {
+                    totalSheets++;
+                    const sheetData = allSheetsData[sheetKey];
+                    if (sheetData.students) {
+                        sheetData.students.forEach(student => {
+                            uniqueStudents.add(student.rollNo);
+                        });
+                    }
+                }
+            });
+            
+            // Update stats cards
+            document.getElementById('viewTotalFaculty').textContent = filteredFaculty.length;
+            document.getElementById('viewTotalStudents').textContent = uniqueStudents.size;
+            document.getElementById('viewTotalSheets').textContent = totalSheets;
+            
+            // Update date range display
+            if (selectedDate) {
+                const dateObj = new Date(selectedDate + 'T00:00:00');
+                const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                document.getElementById('viewDateRange').textContent = formattedDate;
+            } else {
+                document.getElementById('viewDateRange').textContent = 'Select a date';
+            }
+            
+            // Update report selection info
+            const subjectText = selectedSubject === 'all' ? 'All Subjects' : selectedSubject;
+            document.getElementById('reportSelectionInfo').textContent = 
+                `${yearNames[viewCurrentYear]} Year - Sem ${viewCurrentSem} - ${subjectText}`;
+            
+            // Render faculty cards with date-specific attendance
+            await renderViewFacultyCards(filteredFaculty, currentSemester, selectedDate);
+        }
+
+        async function renderViewFacultyCards(facultyList, semester, selectedDate) {
+            const grid = document.getElementById('viewFacultyGrid');
+            
+            if (facultyList.length === 0) {
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666; grid-column: 1/-1;">
+                        <span style="font-size: 2rem;">📭</span>
+                        <p>No faculty data found for this semester</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            if (!selectedDate) {
+                grid.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #666; grid-column: 1/-1;">
+                        <span style="font-size: 2rem;">📅</span>
+                        <p>Please select a date to view attendance data</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Show loading
+            grid.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #666; grid-column: 1/-1;">
+                    <div class="spinner" style="margin: 0 auto 15px;"></div>
+                    <p>Loading attendance data for ${selectedDate}...</p>
+                </div>
+            `;
+            
+            // Load attendance data for each faculty on the selected date
+            const facultyCards = await Promise.all(facultyList.map(async faculty => {
+                let stats = {
+                    totalStudents: 0,
+                    totalPresent: 0,
+                    totalAbsent: 0,
+                    avgAttendance: 0,
+                    notMarked: 0
+                };
+                
+                try {
+                    // Get total students from sheet data
+                    const sheetKey = `${faculty.id}_${faculty.semester}_${faculty.subject}`;
+                    const sheetData = allSheetsData[sheetKey];
+                    if (sheetData && sheetData.students) {
+                        stats.totalStudents = sheetData.students.length;
+                    }
+                    
+                    // Convert date format from YYYY-MM-DD to DD-MMM
+                    const dateObj = new Date(selectedDate + 'T00:00:00');
+                    const day = dateObj.getDate().toString().padStart(2, '0');
+                    const month = dateObj.toLocaleString('en-US', { month: 'short' });
+                    const formattedDate = `${day}-${month}`;
+                    
+                    // Fetch date-specific attendance
+                    const response = await fetch(`${API_BASE}/api/attendance/load/${faculty.id}/${formattedDate}`);
+                    const result = await response.json();
+                    
+                    if (result.success && result.exists && result.attendance) {
+                        // Count attendance for the specific date
+                        Object.values(result.attendance).forEach(status => {
+                            if (status === 'P' || status === 'p') {
+                                stats.totalPresent++;
+                            } else if (status === 'A' || status === 'a') {
+                                stats.totalAbsent++;
+                            }
+                        });
+                        
+                        stats.notMarked = stats.totalStudents - (stats.totalPresent + stats.totalAbsent);
+                        
+                        if (stats.totalStudents > 0) {
+                            stats.avgAttendance = ((stats.totalPresent / stats.totalStudents) * 100).toFixed(1);
+                        }
+                    } else {
+                        // No attendance data for this date - all students are not marked
+                        stats.notMarked = stats.totalStudents;
+                    }
+                } catch (error) {
+                    console.error('Error loading attendance for', faculty.id, error);
+                    // Keep default stats (all zeros, not marked = total)
+                    stats.notMarked = stats.totalStudents;
+                }
+                
+                const fileName = `${faculty.id}_${semester.replace('-', '_')}_${faculty.subject.replace(/\s+/g, '_')}.xlsx`;
+                
+                return `
+                    <div style="background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                            <div>
+                                <h3 style="margin: 0; color: #333; font-size: 1.1rem;">${faculty.name}</h3>
+                                <p style="margin: 5px 0; color: #667eea; font-weight: 600;">📚 ${faculty.subject}</p>
+                                <p style="margin: 5px 0; color: #666; font-size: 0.85rem;">🏛️ ${faculty.department}</p>
+                            </div>
+                            <span style="background: #667eea; color: white; padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: 600;">${semester}</span>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 15px 0;">
+                            <div style="background: #ecf0f1; padding: 10px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: #2c3e50;">${stats.totalStudents}</div>
+                                <div style="font-size: 0.75rem; color: #7f8c8d;">Students</div>
+                            </div>
+                            <div style="background: #d5f4e6; padding: 10px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: #27ae60;">${stats.totalPresent}</div>
+                                <div style="font-size: 0.75rem; color: #229954;">Present</div>
+                            </div>
+                            <div style="background: #fadbd8; padding: 10px; border-radius: 8px; text-align: center;">
+                                <div style="font-size: 1.3rem; font-weight: 700; color: #e74c3c;">${stats.totalAbsent}</div>
+                                <div style="font-size: 0.75rem; color: #c0392b;">Absent</div>
+                            </div>
+                        </div>
+                        
+                        <div style="background: #fff3cd; padding: 8px; border-radius: 8px; text-align: center; margin: 10px 0; border: 2px dashed #856404;">
+                            <span style="font-size: 0.75rem; color: #856404; font-weight: 600;">Not Marked: </span>
+                            <span style="font-size: 1.1rem; font-weight: 700; color: #856404;">${stats.notMarked}</span>
+                        </div>
+                        
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; border-radius: 8px; text-align: center; margin: 10px 0;">
+                            <div style="font-size: 0.75rem; opacity: 0.9;">Attendance on ${selectedDate}</div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${stats.avgAttendance}%</div>
+                        </div>
+                        
+                        <div style="display: flex; gap: 8px; margin-top: 15px;">
+                            <button onclick="openAttendanceSheet('${fileName}', '${faculty.name}', '${faculty.subject}', '${semester}')" style="flex: 1; background: #27ae60; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">
+                                📂 View Sheet
+                            </button>
+                            <button onclick="downloadAttendanceSheet('${fileName}')" style="flex: 1; background: #3498db; color: white; border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.85rem;">
+                                ⬇️ Download
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }));
+            
+            // Filter out empty cards (errors) and join
+            grid.innerHTML = facultyCards.filter(card => card).join('');
+        }
+
+        async function openAttendanceSheet(fileName, facultyName, subject, semester) {
+            const modal = document.getElementById('sheetViewerModal');
+            const content = document.getElementById('sheetViewerContent');
+            const title = document.getElementById('sheetViewerTitle');
+            
+            // Set title
+            title.textContent = `${facultyName} - ${subject} (${semester})`;
+            
+            // Show modal with loading
+            modal.classList.remove('hidden');
+            content.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: #666;">
+                    <div class="spinner" style="margin: 0 auto 15px;"></div>
+                    <p>Loading sheet data...</p>
+                </div>
+            `;
+            
+            try {
+                // Fetch the Excel file and parse it
+                const response = await fetch(`${API_BASE}/sheets/${fileName}`);
+                if (!response.ok) {
+                    throw new Error('Failed to load sheet');
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                // Find date columns (start after S.No, Roll No, Student Name)
+                const headerRow = jsonData[0];
+                const dateStartIndex = 3;
+                const dateColumns = [];
+                for (let i = dateStartIndex; i < headerRow.length; i++) {
+                    if (headerRow[i]) {
+                        dateColumns.push(i);
+                    }
+                }
+                
+                // Render the data as an HTML table with Conducted and Present columns
+                let tableHTML = '<div style="overflow-x: auto;"><table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">';
+                
+                jsonData.forEach((row, rowIndex) => {
+                    tableHTML += '<tr>';
+                    row.forEach((cell, cellIndex) => {
+                        const isHeader = rowIndex === 0;
+                        const style = isHeader 
+                            ? 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 8px; font-weight: 700; text-align: center; border: 1px solid #ddd; position: sticky; top: 0; z-index: 10;'
+                            : `padding: 10px 8px; border: 1px solid #ddd; text-align: ${cellIndex < 3 ? 'left' : 'center'}; background: ${rowIndex % 2 === 0 ? '#f9f9f9' : 'white'};`;
+                        
+                        const tag = isHeader ? 'th' : 'td';
+                        const displayValue = cell !== undefined && cell !== null ? cell : '';
+                        tableHTML += `<${tag} style="${style}">${displayValue}</${tag}>`;
+                        
+                        // After Student Name column (index 2), add Conducted and Present columns
+                        if (cellIndex === 2) {
+                            if (isHeader) {
+                                tableHTML += `<th style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 8px; font-weight: 700; text-align: center; border: 1px solid #ddd; position: sticky; top: 0; z-index: 10;">Conducted</th>`;
+                                tableHTML += `<th style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 8px; font-weight: 700; text-align: center; border: 1px solid #ddd; position: sticky; top: 0; z-index: 10;">Present</th>`;
+                            } else {
+                                // Calculate Conducted and Present for this student
+                                let conducted = 0;
+                                let present = 0;
+                                
+                                dateColumns.forEach(dateIdx => {
+                                    const attendance = row[dateIdx];
+                                    if (attendance === 'P' || attendance === 'p' || attendance === 'A' || attendance === 'a') {
+                                        conducted++;
+                                        if (attendance === 'P' || attendance === 'p') {
+                                            present++;
+                                        }
+                                    }
+                                });
+                                
+                                const bgColor = rowIndex % 2 === 0 ? '#f9f9f9' : 'white';
+                                tableHTML += `<td style="padding: 10px 8px; border: 1px solid #ddd; text-align: center; background: ${bgColor}; font-weight: 600; color: #667eea;">${conducted}</td>`;
+                                tableHTML += `<td style="padding: 10px 8px; border: 1px solid #ddd; text-align: center; background: ${bgColor}; font-weight: 600; color: #10b981;">${present}</td>`;
+                            }
+                        }
+                    });
+                    tableHTML += '</tr>';
+                });
+                
+                tableHTML += '</table></div>';
+                content.innerHTML = tableHTML;
+                
+            } catch (error) {
+                console.error('Error loading sheet:', error);
+                content.innerHTML = `
+                    <div style="text-align: center; padding: 40px; color: #e74c3c;">
+                        <span style="font-size: 2rem;">⚠️</span>
+                        <p>Error loading sheet data</p>
+                        <p style="font-size: 0.9rem; color: #666;">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function closeSheetViewer() {
+            document.getElementById('sheetViewerModal').classList.add('hidden');
+        }
+
+        function downloadAttendanceSheet(fileName) {
+            const link = document.createElement('a');
+            link.href = `${API_BASE}/sheets/${fileName}`;
+            link.download = fileName;
+            link.click();
+        }
+
+        async function generateViewAttendanceReport() {
+            const currentSemester = `${viewCurrentYear}-${viewCurrentSem}`;
+            const selectedSubject = document.getElementById('viewSubjectSelect').value;
+            const yearNames = { 2: 'II', 3: 'III', 4: 'IV' };
+            
+            try {
+                showLoading('Generating attendance report...');
+                
+                if (selectedSubject === 'all') {
+                    // Generate semester-wise report for selected semester only
+                    const response = await fetch(`${API_BASE}/api/admin/generate-combined-report`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ semesters: [currentSemester] })
+                    });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `Attendance_Report_${yearNames[viewCurrentYear]}_Year_Sem_${viewCurrentSem}_${Date.now()}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        showToast('Report generated successfully!', 'success');
+                    } else {
+                        const result = await response.json();
+                        showToast('Error: ' + result.message, 'error');
+                    }
+                } else {
+                    // Generate subject-specific report
+                    const response = await fetch(`${API_BASE}/api/admin/generate-subject-report`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            semester: currentSemester,
+                            subject: selectedSubject
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `${selectedSubject}_${currentSemester}_Report_${Date.now()}.xlsx`;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        window.URL.revokeObjectURL(url);
+                        
+                        showToast('Subject report generated successfully!', 'success');
+                    } else {
+                        const result = await response.json();
+                        showToast('Error: ' + result.message, 'error');
+                    }
+                }
+            } catch (error) {
+                console.error('Error generating report:', error);
+                showToast('Error generating report. Please try again.', 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ===== DATE RANGE REPORT FUNCTIONS =====
+        function populateRangeFacultyCheckboxes() {
+            const container = document.getElementById('rangeFacultyCheckboxes');
+            const currentSemester = `${viewCurrentYear}-${viewCurrentSem}`;
+            const selectedSubject = document.getElementById('viewSubjectSelect').value;
+            
+            // Filter faculty for current semester and subject
+            let filteredFaculty = allFacultyList.filter(f => f.semester === currentSemester);
+            
+            if (selectedSubject !== 'all') {
+                filteredFaculty = filteredFaculty.filter(f => f.subject === selectedSubject);
+            }
+            
+            if (filteredFaculty.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">No faculty found for this selection</p>';
+                return;
+            }
+            
+            // Group by subject
+            const groupedBySubject = {};
+            filteredFaculty.forEach(faculty => {
+                if (!groupedBySubject[faculty.subject]) {
+                    groupedBySubject[faculty.subject] = [];
+                }
+                groupedBySubject[faculty.subject].push(faculty);
+            });
+            
+            let html = '';
+            Object.keys(groupedBySubject).sort().forEach(subject => {
+                html += `<div style="grid-column: 1/-1; padding: 10px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border-radius: 6px; font-weight: 700; margin-top: 10px;">📚 ${subject}</div>`;
+                
+                groupedBySubject[subject].forEach(faculty => {
+                    html += `
+                        <label style="display: flex; align-items: center; gap: 10px; padding: 12px; background: white; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.borderColor='#667eea'" onmouseout="this.querySelector('input:checked') ? '' : this.style.borderColor='#e0e0e0'">
+                            <input type="checkbox" class="range-faculty-checkbox" value="${faculty.id}" style="width: 18px; height: 18px; cursor: pointer;" onchange="this.closest('label').style.borderColor = this.checked ? '#667eea' : '#e0e0e0'">
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #333;">${faculty.name}</div>
+                                <div style="font-size: 0.8rem; color: #666;">🆔 ${faculty.id} • 🏛️ ${faculty.department}</div>
+                            </div>
+                        </label>
+                    `;
+                });
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function selectAllRangeFaculty() {
+            document.querySelectorAll('.range-faculty-checkbox').forEach(cb => {
+                cb.checked = true;
+                cb.closest('label').style.borderColor = '#667eea';
+            });
+            showToast('All faculty selected', 'info');
+        }
+        
+        function deselectAllRangeFaculty() {
+            document.querySelectorAll('.range-faculty-checkbox').forEach(cb => {
+                cb.checked = false;
+                cb.closest('label').style.borderColor = '#e0e0e0';
+            });
+            showToast('All faculty deselected', 'info');
+        }
+        
+        async function generateDateRangeReport() {
+            const fromDate = document.getElementById('rangeFromDate').value;
+            const toDate = document.getElementById('rangeToDate').value;
+            const selectedFacultyIds = Array.from(document.querySelectorAll('.range-faculty-checkbox:checked')).map(cb => cb.value);
+            const currentSemester = `${viewCurrentYear}-${viewCurrentSem}`;
+            const selectedSubject = document.getElementById('viewSubjectSelect').value;
+            const yearNames = { 2: 'II', 3: 'III', 4: 'IV' };
+            
+            // Validation
+            if (!fromDate || !toDate) {
+                showToast('Please select both From Date and To Date', 'warning');
+                return;
+            }
+            
+            if (new Date(fromDate) > new Date(toDate)) {
+                showToast('From Date must be before or equal to To Date', 'error');
+                return;
+            }
+            
+            if (selectedFacultyIds.length === 0) {
+                showToast('Please select at least one faculty member', 'warning');
+                return;
+            }
+            
+            try {
+                showLoading('Generating detailed date range report...');
+                
+                // Get dates in range (formatted as DD-MMM)
+                const dates = [];
+                const current = new Date(fromDate + 'T00:00:00');
+                const end = new Date(toDate + 'T00:00:00');
+                
+                while (current <= end) {
+                    if (current.getDay() !== 0) { // Skip Sundays
+                        const day = current.getDate().toString().padStart(2, '0');
+                        const month = current.toLocaleString('en-US', { month: 'short' });
+                        dates.push(`${day}-${month}`);
+                    }
+                    current.setDate(current.getDate() + 1);
+                }
+                
+                // Create a new workbook
+                const workbook = XLSX.utils.book_new();
+                
+                // Process each selected faculty
+                for (const facultyId of selectedFacultyIds) {
+                    const faculty = allFacultyList.find(f => f.id === facultyId);
+                    if (!faculty) continue;
+                    
+                    try {
+                        // Download the actual Excel file for this faculty
+                        const fileName = `${faculty.id}_${faculty.semester.replace('-', '_')}_${faculty.subject.replace(/\s+/g, '_')}.xlsx`;
+                        const response = await fetch(`${API_BASE}/sheets/${fileName}`);
+                        
+                        if (!response.ok) {
+                            console.error(`Failed to fetch sheet for ${faculty.name}`);
+                            continue;
+                        }
+                        
+                        const arrayBuffer = await response.arrayBuffer();
+                        const facultyWorkbook = XLSX.read(arrayBuffer, { type: 'array' });
+                        const facultySheet = facultyWorkbook.Sheets[facultyWorkbook.SheetNames[0]];
+                        const allData = XLSX.utils.sheet_to_json(facultySheet, { header: 1 });
+                        
+                        if (allData.length === 0) continue;
+                        
+                        // Find column indices for the selected date range
+                        const headerRow = allData[0];
+                        const dateColumns = [];
+                        const dateIndices = [];
+                        
+                        dates.forEach(date => {
+                            const index = headerRow.indexOf(date);
+                            if (index !== -1) {
+                                dateColumns.push(date);
+                                dateIndices.push(index);
+                            }
+                        });
+                        
+                        if (dateColumns.length === 0) {
+                            console.log(`No attendance data found in date range for ${faculty.name}`);
+                            continue;
+                        }
+                        
+                        // Create filtered data for this faculty
+                        const filteredData = [];
+                        
+                        // Add header info
+                        filteredData.push([`${faculty.subject} - ${faculty.name} (${faculty.id})`]);
+                        filteredData.push([`${yearNames[viewCurrentYear]} Year - Semester ${viewCurrentSem} (${currentSemester})`]);
+                        filteredData.push([`Department: ${faculty.department}`]);
+                        filteredData.push([`Date Range: ${fromDate} to ${toDate}`]);
+                        filteredData.push([]);
+                        
+                        // Create new header with selected date columns
+                        const newHeader = ['S.No', 'Roll No', 'Student Name', ...dateColumns, 'Total Present', 'Total Absent', 'Percentage'];
+                        filteredData.push(newHeader);
+                        
+                        // Process student rows
+                        for (let i = 1; i < allData.length; i++) {
+                            const row = allData[i];
+                            if (!row || row.length === 0) continue;
+                            
+                            const sNo = row[0];
+                            const rollNo = row[1];
+                            const studentName = row[2];
+                            
+                            if (!rollNo || !studentName) continue;
+                            
+                            // Extract attendance for selected dates
+                            const attendanceValues = dateIndices.map(idx => row[idx] || '');
+                            
+                            // Calculate totals for the date range
+                            let present = 0;
+                            let absent = 0;
+                            attendanceValues.forEach(val => {
+                                if (val === 'P' || val === 'p') present++;
+                                else if (val === 'A' || val === 'a') absent++;
+                            });
+                            
+                            const total = present + absent;
+                            const percentage = total > 0 ? ((present / total) * 100).toFixed(2) + '%' : '0%';
+                            
+                            filteredData.push([sNo, rollNo, studentName, ...attendanceValues, present, absent, percentage]);
+                        }
+                        
+                        // Add summary
+                        filteredData.push([]);
+                        filteredData.push(['Summary']);
+                        filteredData.push(['Total Students:', filteredData.length - 7]); // Minus header rows
+                        filteredData.push(['Date Columns:', dateColumns.length]);
+                        filteredData.push(['Date Range:', `${fromDate} to ${toDate}`]);
+                        
+                        // Create worksheet
+                        const worksheet = XLSX.utils.aoa_to_sheet(filteredData);
+                        
+                        // Set column widths
+                        const colWidths = [
+                            { wch: 5 },   // S.No
+                            { wch: 15 },  // Roll No
+                            { wch: 25 },  // Student Name
+                            ...dateColumns.map(() => ({ wch: 8 })),  // Date columns
+                            { wch: 12 },  // Total Present
+                            { wch: 12 },  // Total Absent
+                            { wch: 10 }   // Percentage
+                        ];
+                        worksheet['!cols'] = colWidths;
+                        
+                        // Add sheet to workbook
+                        const sheetName = `${faculty.name.substring(0, 25)}_${faculty.id}`.replace(/[\\\/\?\*\[\]]/g, '_');
+                        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+                        
+                    } catch (error) {
+                        console.error(`Error processing sheet for ${faculty.name}:`, error);
+                    }
+                }
+                
+                // Check if any sheets were added
+                if (workbook.SheetNames.length === 0) {
+                    showToast('No attendance data found for the selected date range', 'warning');
+                    hideLoading();
+                    return;
+                }
+                
+                // Generate and download the combined workbook
+                const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+                const blob = new Blob([excelBuffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `Date_Range_Report_${yearNames[viewCurrentYear]}Year_Sem${viewCurrentSem}_${fromDate}_to_${toDate}.xlsx`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                showToast('Date range report generated successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Error generating date range report:', error);
+                showToast('Error generating report: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        // ===== ADD SUBJECTS STATE =====
+        let addSubjectState = {
+            selectedSemester: '',
+            existingSubjects: [],
+            selectedSubject: '',
+            facultyList: [],
+            selectedFacultyIds: [],
+            newFacultyList: []
+        };
+
+        // ===== ADD SUBJECTS FUNCTIONS =====
+        
+        window.selectAddSubjectSemester = async function(sem) {
+            console.log('Selected Add Subject Semester:', sem);
+            addSubjectState.selectedSemester = sem;
+            addSubjectState.selectedFacultyIds = [];
+            addSubjectState.newFacultyList = [];
+            
+            try {
+                // Show loading
+                document.getElementById('selectedSemesterLabel').textContent = sem;
+                
+                // Load allFacultyList if not already loaded
+                if (allFacultyList.length === 0) {
+                    console.log('Loading faculty list for Add Subjects...');
+                    await reloadFacultyList();
+                }
+                
+                console.log('allFacultyList after check:', allFacultyList.length);
+                
+                // Load existing subjects for this semester
+                const response = await fetch(`${API_BASE}/api/subjects/list?semester=${sem}`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    addSubjectState.existingSubjects = result.data || [];
+                    renderExistingSubjects();
+                    
+                    // Load faculty list for dropdown
+                    const facultyResponse = await fetch(`${API_BASE}/api/faculty/list`);
+                    const facultyResult = await facultyResponse.json();
+                    if (facultyResult.success) {
+                        addSubjectState.facultyList = facultyResult.data || [];
+                    }
+                    
+                    // Show subject list section
+                    document.getElementById('subjectListSection').classList.remove('hidden');
+                    document.getElementById('selectSubjectSection').classList.add('hidden');
+                    document.getElementById('newFacultySection').classList.add('hidden');
+                    document.getElementById('addSubjectFacultySection').classList.add('hidden');
+                    document.getElementById('addSubjectButtonSection').classList.add('hidden');
+                } else {
+                    alert('Error loading subjects: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+                alert('Error loading subjects. Please try again.');
+            }
+        };
+
+        function renderExistingSubjects() {
+            const container = document.getElementById('existingSubjectsList');
+            
+            console.log('Rendering subjects. allFacultyList length:', allFacultyList.length);
+            console.log('Selected semester:', addSubjectState.selectedSemester);
+            
+            if (addSubjectState.existingSubjects.length === 0) {
+                container.innerHTML = '<p style="color: #666; padding: 15px; background: #f8f9fa; border-radius: 8px;">No subjects found for this semester. Create one below!</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 15px;">
+                    ${addSubjectState.existingSubjects.map(subject => {
+                        // Count faculty assigned to this subject
+                        const assignedFaculty = allFacultyList.filter(f => {
+                            const matches = f.semester === addSubjectState.selectedSemester && f.subject === subject;
+                            if (matches) {
+                                console.log('Matched faculty:', f.name, f.id, f.semester, f.subject);
+                            }
+                            return matches;
+                        });
+                        const assignedCount = assignedFaculty.length;
+                        
+                        console.log(`Subject "${subject}" - Found ${assignedCount} faculty`);
+                        
+                        return `
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 10px; cursor: pointer;" 
+                                 onclick="selectExistingSubject('${subject.replace(/'/g, "\\'")}')">
+                                <h4 style="margin: 0 0 10px 0;">📚 ${subject}</h4>
+                                <p style="margin: 0; font-size: 0.85rem; opacity: 0.9;">${assignedCount} faculty assigned</p>
+                                <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.3); display: flex; justify-content: space-between;">
+                                    <span style="font-size: 0.8rem;">Click to manage →</span>
+                                    <button onclick="event.stopPropagation(); deleteSubject('${subject.replace(/'/g, "\\'")}')" 
+                                            style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 3px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem;">
+                                        🗑️ Delete
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        window.selectExistingSubject = function(subject) {
+            addSubjectState.selectedSubject = subject;
+            document.getElementById('selectedSubjectLabel').textContent = subject;
+            document.getElementById('manageFacultySubjectLabel').textContent = subject;
+            
+            // Show faculty selection and management sections
+            renderFacultyCheckboxes();
+            renderAssignedFaculty();
+            
+            document.getElementById('selectSubjectSection').classList.add('hidden');
+            document.getElementById('newFacultySection').classList.remove('hidden');
+            document.getElementById('addSubjectFacultySection').classList.remove('hidden');
+            document.getElementById('manageFacultySection').classList.remove('hidden');
+            document.getElementById('addSubjectButtonSection').classList.remove('hidden');
+        };
+
+        window.deleteSubject = async function(subject) {
+            if (!confirm(`Are you sure you want to delete "${subject}"? This will remove all faculty assignments and attendance sheets for this subject.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/subjects/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        semester: addSubjectState.selectedSemester,
+                        subject: subject
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    // Reload the semester to refresh the list
+                    selectAddSubjectSemester(addSubjectState.selectedSemester);
+                } else {
+                    alert('Error deleting subject: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error deleting subject:', error);
+                alert('Error deleting subject. Please try again.');
+            }
+        };
+
+        window.createNewSubject = async function() {
+            const subjectName = document.getElementById('newSubjectNameInput').value.trim();
+            
+            if (!subjectName) {
+                alert('Please enter a subject name');
+                return;
+            }
+            
+            // Check if subject already exists
+            if (addSubjectState.existingSubjects.includes(subjectName)) {
+                alert('This subject already exists!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/subjects/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        semester: addSubjectState.selectedSemester,
+                        subject: subjectName
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`Subject "${subjectName}" created successfully!`);
+                    document.getElementById('newSubjectNameInput').value = '';
+                    // Reload subjects list
+                    selectAddSubjectSemester(addSubjectState.selectedSemester);
+                } else {
+                    alert('Error creating subject: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error creating subject:', error);
+                alert('Error creating subject. Please try again.');
+            }
+        };
+
+        window.handleSubjectSelection = function() {
+            const select = document.getElementById('subjectDropdown');
+            addSubjectState.selectedSubject = select.value;
+            
+            if (addSubjectState.selectedSubject) {
+                document.getElementById('selectedSubjectLabel').textContent = addSubjectState.selectedSubject;
+                document.getElementById('manageFacultySubjectLabel').textContent = addSubjectState.selectedSubject;
+                
+                // Show faculty selection and management sections
+                renderFacultyCheckboxes();
+                renderAssignedFaculty();
+                
+                document.getElementById('newFacultySection').classList.remove('hidden');
+                document.getElementById('addSubjectFacultySection').classList.remove('hidden');
+                document.getElementById('manageFacultySection').classList.remove('hidden');
+                document.getElementById('addSubjectButtonSection').classList.remove('hidden');
+            }
+        };
+
+        function renderFacultyCheckboxes() {
+            const container = document.getElementById('facultyCheckboxList');
+            
+            if (addSubjectState.facultyList.length === 0) {
+                container.innerHTML = '<p style="color: #666;">No faculty available</p>';
+                return;
+            }
+            
+            // Group faculty by department
+            const grouped = {};
+            addSubjectState.facultyList.forEach(f => {
+                if (!grouped[f.department]) grouped[f.department] = [];
+                grouped[f.department].push(f);
+            });
+            
+            container.innerHTML = Object.keys(grouped).map(dept => `
+                <div style="margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #667eea;">🏛️ ${dept}</h4>
+                    <div style="display: flex; flex-direction: column; gap: 8px; padding-left: 20px;">
+                        ${grouped[dept].map(faculty => {
+                            // Check if already assigned to this subject
+                            const isAssigned = allFacultyList.some(f => 
+                                f.id === faculty.id && 
+                                f.semester === addSubjectState.selectedSemester && 
+                                f.subject === addSubjectState.selectedSubject
+                            );
+                            
+                            return `
+                                <label style="display: flex; align-items: center; padding: 10px; background: ${isAssigned ? '#f8d7da' : '#f8f9ff'}; border-radius: 6px; cursor: ${isAssigned ? 'not-allowed' : 'pointer'};">
+                                    <input type="checkbox" 
+                                           value="${faculty.id}" 
+                                           ${isAssigned ? 'disabled' : ''}
+                                           onchange="toggleFacultySelection('${faculty.id}')" 
+                                           style="margin-right: 10px;">
+                                    <span style="flex: 1; ${isAssigned ? 'opacity: 0.5' : ''}">
+                                        ${faculty.name} (${faculty.id})
+                                        ${isAssigned ? '<span style="color: #e74c3c; font-size: 0.8rem; margin-left: 10px;">Already assigned</span>' : ''}
+                                    </span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAssignedFaculty() {
+            const container = document.getElementById('assignedFacultyList');
+            
+            // Get faculty already assigned to this subject
+            const assigned = allFacultyList.filter(f => 
+                f.semester === addSubjectState.selectedSemester && 
+                f.subject === addSubjectState.selectedSubject
+            );
+            
+            if (assigned.length === 0) {
+                container.innerHTML = '<p style="color: #666; padding: 15px; background: #f8f9fa; border-radius: 8px;">No faculty assigned to this subject yet</p>';
+                return;
+            }
+            
+            container.innerHTML = assigned.map(faculty => `
+                <div style="background: white; border: 2px solid #667eea; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h4 style="margin: 0; color: #333;">${faculty.name}</h4>
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 0.85rem;">${faculty.id} • ${faculty.department}</p>
+                    </div>
+                    <button onclick="removeFacultyAssignment('${faculty.id}')" 
+                            style="background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                        🗑️ Remove
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        window.toggleFacultySelection = function(facultyId) {
+            const index = addSubjectState.selectedFacultyIds.indexOf(facultyId);
+            if (index > -1) {
+                addSubjectState.selectedFacultyIds.splice(index, 1);
+            } else {
+                addSubjectState.selectedFacultyIds.push(facultyId);
+            }
+            console.log('Selected faculty IDs:', addSubjectState.selectedFacultyIds);
+        };
+
+        window.toggleNewFacultyForm = function() {
+            const form = document.getElementById('newFacultyForm');
+            const btn = document.getElementById('toggleFacultyBtn');
+            
+            if (form.style.display === 'none') {
+                form.style.display = 'block';
+                btn.textContent = 'Hide Form';
+            } else {
+                form.style.display = 'none';
+                btn.textContent = 'Show Form';
+            }
+        };
+
+        window.addNewFacultyToList = function() {
+            const id = document.getElementById('newFacultyId').value.trim();
+            const name = document.getElementById('newFacultyName').value.trim();
+            const dept = document.getElementById('newFacultyDept').value.trim();
+            const password = document.getElementById('newFacultyPassword').value.trim();
+            
+            if (!id || !name || !dept || !password) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            // Check if ID already exists in any faculty list
+            if (allFacultyList.some(f => f.id === id)) {
+                alert(`Faculty ID "${id}" already exists in the system!`);
+                return;
+            }
+            
+            if (addSubjectState.facultyList.some(f => f.id === id)) {
+                alert(`Faculty ID "${id}" already exists!`);
+                return;
+            }
+            
+            if (addSubjectState.newFacultyList.some(f => f.id === id)) {
+                alert(`Faculty ID "${id}" already added to the current list!`);
+                return;
+            }
+            
+            // Add to new faculty list
+            addSubjectState.newFacultyList.push({ id, name, department: dept, password });
+            addSubjectState.selectedFacultyIds.push(id);
+            
+            alert(`Faculty "${name}" (${id}) added to the list!`);
+            
+            // Clear form
+            document.getElementById('newFacultyId').value = '';
+            document.getElementById('newFacultyName').value = '';
+            document.getElementById('newFacultyDept').value = '';
+            document.getElementById('newFacultyPassword').value = '';
+            
+            // Hide form
+            toggleNewFacultyForm();
+            
+            console.log('New faculty list:', addSubjectState.newFacultyList);
+        };
+
+        window.submitFacultyAssignment = async function() {
+            if (addSubjectState.selectedFacultyIds.length === 0 && addSubjectState.newFacultyList.length === 0) {
+                alert('Please select at least one faculty or create a new faculty member');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/assign-faculty`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        semester: addSubjectState.selectedSemester,
+                        subject: addSubjectState.selectedSubject,
+                        facultyIds: addSubjectState.selectedFacultyIds,
+                        newFaculty: addSubjectState.newFacultyList
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    
+                    // Reset state
+                    addSubjectState.selectedFacultyIds = [];
+                    addSubjectState.newFacultyList = [];
+                    
+                    // Reload faculty list to reflect new assignments
+                    await reloadFacultyList();
+                    
+                    // Reload to show updated assignments
+                    selectAddSubjectSemester(addSubjectState.selectedSemester);
+                } else {
+                    alert('Error assigning faculty: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error assigning faculty:', error);
+                alert('Error assigning faculty. Please try again.');
+            }
+        };
+
+        window.removeFacultyAssignment = async function(facultyId) {
+            if (!confirm('Are you sure you want to remove this faculty assignment? The attendance sheet will be deleted.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/remove-faculty-assignment`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        facultyId: facultyId,
+                        semester: addSubjectState.selectedSemester,
+                        subject: addSubjectState.selectedSubject
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    
+                    // Reload faculty list to reflect removed assignment
+                    await reloadFacultyList();
+                    
+                    // Reload to show updated assignments
+                    selectExistingSubject(addSubjectState.selectedSubject);
+                } else {
+                    alert('Error removing assignment: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error removing assignment:', error);
+                alert('Error removing assignment. Please try again.');
+            }
+        };
+
+        // ===== ADD STUDENTS STATE =====
+        let addStudentState = {
+            selectedSemester: '',
+            subjects: [],
+            selectedSubject: '',
+            facultyList: [],
+            selectedFacultyId: '',
+            studentsList: [],
+            existingStudents: []
+        };
+
+        // ===== ADD STUDENTS FUNCTIONS =====
+        
+        window.selectAddStudentSemester = async function(sem) {
+            console.log('Selected Add Student Semester:', sem);
+            addStudentState.selectedSemester = sem;
+            addStudentState.studentsList = [];
+            addStudentState.existingStudents = [];
+            
+            try {
+                // Load faculty with their subjects for this semester
+                const response = await fetch(`${API_BASE}/api/faculty/full-list`);
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Filter by semester and group by subject
+                    const semesterFaculty = result.data.filter(f => f.semester === sem);
+                    
+                    // Group by subject
+                    const subjectMap = {};
+                    semesterFaculty.forEach(f => {
+                        if (!subjectMap[f.subject]) {
+                            subjectMap[f.subject] = [];
+                        }
+                        subjectMap[f.subject].push(f);
+                    });
+                    
+                    addStudentState.subjects = Object.keys(subjectMap).map(subject => ({
+                        name: subject,
+                        faculty: subjectMap[subject]
+                    }));
+                    
+                    console.log('Subjects for semester:', addStudentState.subjects);
+                    
+                    // Render subject cards
+                    renderAddStudentSubjects();
+                    
+                    // Show subject section
+                    document.getElementById('addStudentSubjectSection').classList.remove('hidden');
+                    document.getElementById('addStudentFacultySection').classList.add('hidden');
+                    document.getElementById('studentInputSection').classList.add('hidden');
+                    document.getElementById('addStudentButtonSection').classList.add('hidden');
+                } else {
+                    alert('Error loading subjects: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error loading subjects:', error);
+                alert('Error loading subjects. Please try again.');
+            }
+        };
+
+        function renderAddStudentSubjects() {
+            const container = document.getElementById('addStudentSubjectOptions');
+            
+            if (addStudentState.subjects.length === 0) {
+                container.innerHTML = '<p style="color: #666; padding: 20px; grid-column: 1/-1; text-align: center;">No subjects found for this semester</p>';
+                return;
+            }
+            
+            container.innerHTML = addStudentState.subjects.map(subjectData => `
+                <div class="stat-card" onclick="selectAddStudentSubject('${subjectData.name.replace(/'/g, "\\'")}')">
+                    <div class="icon">📚</div>
+                    <div class="label">${subjectData.name}</div>
+                    <div style="font-size: 0.8rem; color: #666; margin-top: 5px;">${subjectData.faculty.length} faculty</div>
+                </div>
+            `).join('');
+        }
+
+        window.selectAddStudentSubject = function(subject) {
+            addStudentState.selectedSubject = subject;
+            
+            // Get faculty for this subject
+            const subjectData = addStudentState.subjects.find(s => s.name === subject);
+            if (!subjectData) return;
+            
+            addStudentState.facultyList = subjectData.faculty;
+            
+            // Populate faculty dropdown
+            const select = document.getElementById('addStudentFacultySelect');
+            select.innerHTML = '<option value="">-- Select Faculty --</option>' +
+                addStudentState.facultyList.map(f => 
+                    `<option value="${f.id}">${f.name} (${f.id})</option>`
+                ).join('');
+            
+            // Show faculty section
+            document.getElementById('addStudentFacultySection').classList.remove('hidden');
+            document.getElementById('studentInputSection').classList.add('hidden');
+            document.getElementById('addStudentButtonSection').classList.add('hidden');
+            
+            // Clear students list
+            addStudentState.studentsList = [];
+            addStudentState.existingStudents = [];
+            document.getElementById('studentsList').innerHTML = '';
+        };
+
+        window.selectAddStudentFaculty = async function() {
+            const select = document.getElementById('addStudentFacultySelect');
+            addStudentState.selectedFacultyId = select.value;
+            
+            if (!addStudentState.selectedFacultyId) {
+                document.getElementById('studentInputSection').classList.add('hidden');
+                document.getElementById('addStudentButtonSection').classList.add('hidden');
+                return;
+            }
+            
+            // Load existing students for this faculty
+            try {
+                const response = await fetch(
+                    `${API_BASE}/api/students/faculty/${addStudentState.selectedFacultyId}?semester=${addStudentState.selectedSemester}&subject=${encodeURIComponent(addStudentState.selectedSubject)}`
+                );
+                const result = await response.json();
+                
+                if (result.success) {
+                    addStudentState.existingStudents = result.data || [];
+                    console.log('Existing students:', addStudentState.existingStudents);
+                }
+            } catch (error) {
+                console.error('Error loading existing students:', error);
+            }
+            
+            // Clear and show student input section
+            addStudentState.studentsList = [];
+            renderStudentsList();
+            
+            document.getElementById('studentInputSection').classList.remove('hidden');
+            document.getElementById('addStudentButtonSection').classList.remove('hidden');
+        };
+
+        window.handleStudentExcelUpload = async function(event) {
+            const file = event.target.files[0];
+            const statusDiv = document.getElementById('excelUploadStatus');
+            
+            if (!file) return;
+            
+            statusDiv.innerHTML = '<span style="color: #ffd700;">⏳ Processing Excel file...</span>';
+            
+            try {
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                if (jsonData.length === 0) {
+                    statusDiv.innerHTML = '<span style="color: #ff6b6b;">❌ Excel file is empty</span>';
+                    return;
+                }
+                
+                // Find Roll No and Name columns
+                const headerRow = jsonData[0];
+                let rollNoIndex = -1;
+                let nameIndex = -1;
+                
+                // Search for Roll No column (case insensitive, various formats)
+                for (let i = 0; i < headerRow.length; i++) {
+                    const header = String(headerRow[i]).toLowerCase().trim();
+                    if (header.includes('roll') && (header.includes('no') || header.includes('number'))) {
+                        rollNoIndex = i;
+                    }
+                    if ((header === 'name' || header === 'student name' || header.includes('student') && header.includes('name'))) {
+                        nameIndex = i;
+                    }
+                }
+                
+                // If not found, try assuming first 3 columns: S.No, Roll No, Name
+                if (rollNoIndex === -1 || nameIndex === -1) {
+                    console.log('Headers not found, assuming standard format: S.No, Roll No, Name');
+                    rollNoIndex = 1; // Second column
+                    nameIndex = 2;   // Third column
+                }
+                
+                console.log('Found columns - Roll No:', rollNoIndex, 'Name:', nameIndex);
+                
+                // Extract student data
+                let addedCount = 0;
+                let skippedCount = 0;
+                
+                for (let i = 1; i < jsonData.length; i++) {
+                    const row = jsonData[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    const rollNo = String(row[rollNoIndex] || '').trim();
+                    const name = String(row[nameIndex] || '').trim();
+                    
+                    if (!rollNo || !name || rollNo === 'undefined' || name === 'undefined') continue;
+                    
+                    // Check if already exists
+                    if (addStudentState.existingStudents.some(s => s.rollNo === rollNo)) {
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    if (addStudentState.studentsList.some(s => s.rollNo === rollNo)) {
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    // Add to list
+                    addStudentState.studentsList.push({ rollNo, name });
+                    addedCount++;
+                }
+                
+                // Show status
+                statusDiv.innerHTML = `<span style="color: #51cf66;">✅ Added ${addedCount} students${skippedCount > 0 ? ` (Skipped ${skippedCount} duplicates)` : ''}</span>`;
+                
+                // Re-render list
+                renderStudentsList();
+                
+                // Clear file input
+                event.target.value = '';
+                
+            } catch (error) {
+                console.error('Error processing Excel:', error);
+                statusDiv.innerHTML = '<span style="color: #ff6b6b;">❌ Error processing file. Please check the format.</span>';
+            }
+        };
+
+        window.addStudentToList = function() {
+            const rollNo = document.getElementById('studentRollNo').value.trim();
+            const name = document.getElementById('studentName').value.trim();
+            
+            if (!rollNo || !name) {
+                alert('Please enter both roll number and name');
+                return;
+            }
+            
+            // Check if already exists in existing students
+            if (addStudentState.existingStudents.some(s => s.rollNo === rollNo)) {
+                alert('This student already exists in the attendance sheet!');
+                return;
+            }
+            
+            // Check if already in new list
+            if (addStudentState.studentsList.some(s => s.rollNo === rollNo)) {
+                alert('This student is already in the list!');
+                return;
+            }
+            
+            // Add to list
+            addStudentState.studentsList.push({ rollNo, name });
+            
+            // Clear inputs
+            document.getElementById('studentRollNo').value = '';
+            document.getElementById('studentName').value = '';
+            
+            // Re-render list
+            renderStudentsList();
+            
+            // Focus back on roll number input
+            document.getElementById('studentRollNo').focus();
+        };
+
+        function renderStudentsList() {
+            const container = document.getElementById('studentsList');
+            
+            // Show existing students section
+            let html = '';
+            
+            if (addStudentState.existingStudents.length > 0) {
+                html += `
+                    <div style="background: #e8f5e9; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #2e7d32;">✅ Existing Students (${addStudentState.existingStudents.length})</h4>
+                        <div style="max-height: 150px; overflow-y: auto;">
+                            ${addStudentState.existingStudents.map(student => `
+                                <div style="background: white; padding: 8px 12px; margin: 5px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span><strong>${student.rollNo}</strong> - ${student.name}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (addStudentState.studentsList.length === 0) {
+                html += '<p style="color: #666; padding: 15px; background: #f8f9fa; border-radius: 8px;">No new students added yet. Use the form above to add students.</p>';
+            } else {
+                html += `
+                    <div style="background: #fff3e0; border-radius: 8px; padding: 15px;">
+                        <h4 style="margin: 0 0 10px 0; color: #e65100;">➕ New Students to Add (${addStudentState.studentsList.length})</h4>
+                        <div style="max-height: 200px; overflow-y: auto;">
+                            ${addStudentState.studentsList.map((student, idx) => `
+                                <div style="background: white; padding: 10px 15px; margin: 5px 0; border-radius: 6px; display: flex; justify-content: space-between; align-items: center; border: 2px solid #ff9800;">
+                                    <span><strong>${student.rollNo}</strong> - ${student.name}</span>
+                                    <button onclick="removeStudentFromList(${idx})" 
+                                            style="background: #e74c3c; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8rem;">
+                                        🗑️ Remove
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        window.submitNewStudents = async function() {
+            if (addStudentState.studentsList.length === 0) {
+                alert('Please add at least one student');
+                return;
+            }
+            
+            if (!confirm(`Add ${addStudentState.studentsList.length} student(s) to ${addStudentState.selectedSubject}?`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/add-students`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        semester: addStudentState.selectedSemester,
+                        subject: addStudentState.selectedSubject,
+                        facultyId: addStudentState.selectedFacultyId,
+                        students: addStudentState.studentsList
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    
+                    // Reload existing students
+                    selectAddStudentFaculty();
+                } else {
+                    alert('Error adding students: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error adding students:', error);
+                alert('Error adding students. Please try again.');
+            }
+        };
+
+        window.replaceAllStudents = async function() {
+            if (addStudentState.studentsList.length === 0) {
+                alert('Please add at least one student');
+                return;
+            }
+            
+            const confirmMsg = `⚠️ WARNING: This will REPLACE all existing students!\n\n` +
+                `Current students: ${addStudentState.existingStudents.length}\n` +
+                `New students: ${addStudentState.studentsList.length}\n\n` +
+                `All existing attendance data will be lost!\n\n` +
+                `Are you absolutely sure you want to continue?`;
+            
+            if (!confirm(confirmMsg)) {
+                return;
+            }
+            
+            // Double confirmation
+            if (!confirm('This action cannot be undone. Click OK to proceed with replacing all students.')) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/replace-students`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        semester: addStudentState.selectedSemester,
+                        subject: addStudentState.selectedSubject,
+                        facultyId: addStudentState.selectedFacultyId,
+                        students: addStudentState.studentsList
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(result.message);
+                    
+                    // Reload existing students
+                    selectAddStudentFaculty();
+                } else {
+                    alert('Error replacing students: ' + result.message);
+                }
+            } catch (error) {
+                console.error('Error replacing students:', error);
+                alert('Error replacing students. Please try again.');
+            }
+        };
+
+        window.removeStudentFromList = function(idx) {
+            addStudentState.studentsList.splice(idx, 1);
+            renderStudentsList();
+        };
+
+        // ===== INITIALIZATION =====
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== DOMContentLoaded ===');
+            
+            // Check authentication (auto-login enabled)
+            checkAuth();
+            
+            // Setup Quick Actions
+            setupQuickActions();
+            
+            // Load initial data
+            loadStats();
+            
+            // Setup faculty select event listener for Add Students page
+            const facultySelect = document.getElementById('addStudentFacultySelect');
+            if (facultySelect) {
+                facultySelect.addEventListener('change', selectAddStudentFaculty);
+            }
+            
+            // Handle hash navigation
+            const hash = window.location.hash.substring(1);
+            if (hash && ['viewAttendance', 'addSubjects', 'addStudents'].includes(hash)) {
+                showPage(hash);
+            }
+            
+            // Listen for hash changes
+            window.addEventListener('hashchange', function() {
+                const newHash = window.location.hash.substring(1);
+                if (newHash) {
+                    showPage(newHash);
+                } else {
+                    showPage('dashboard');
+                }
+            });
+            
+            console.log('=== Initialization Complete ===');
+        });
+    </script>
+</body>
+</html>

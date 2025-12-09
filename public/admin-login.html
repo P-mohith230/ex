@@ -169,6 +169,11 @@
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('errorMessage');
 
+            console.log('=== ADMIN LOGIN ATTEMPT ===');
+            console.log('Admin ID:', adminId);
+            console.log('Password length:', password.length);
+            console.log('API URL:', `${API_BASE}/api/admin/login`);
+
             try {
                 const response = await fetch(`${API_BASE}/api/admin/login`, {
                     method: 'POST',
@@ -176,18 +181,24 @@
                     body: JSON.stringify({ adminId, password })
                 });
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
+                console.log('Response data:', result);
 
                 if (result.success) {
+                    console.log('Login successful! Admin data:', result.admin);
                     // Store admin session
                     sessionStorage.setItem('adminSession', JSON.stringify(result.admin));
-                    window.location.href = 'admin-dashboard.html';
+                    console.log('Session stored:', sessionStorage.getItem('adminSession'));
+                    window.location.href = 'admin-home.html';
                 } else {
+                    console.log('Login failed:', result.message);
                     errorDiv.textContent = result.message || 'Invalid credentials';
                     errorDiv.style.display = 'block';
                 }
             } catch (error) {
-                errorDiv.textContent = 'Error connecting to server';
+                console.error('Login error:', error);
+                errorDiv.textContent = 'Error connecting to server: ' + error.message;
                 errorDiv.style.display = 'block';
             }
         }

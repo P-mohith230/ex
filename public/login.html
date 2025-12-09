@@ -163,9 +163,23 @@
 
         <form id="loginForm" onsubmit="handleLogin(event)">
             <div class="form-group">
-                <label for="facultySelect">Select Your Name</label>
-                <select id="facultySelect" required onchange="showFacultyInfo()">
-                    <option value="">-- Select Faculty --</option>
+                <label for="semesterSelect">Step 1: Select Semester</label>
+                <select id="semesterSelect" required onchange="onSemesterSelected()">
+                    <option value="">-- Select Semester --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="subjectGroup" style="display: none;">
+                <label for="subjectSelect">Step 2: Select Subject</label>
+                <select id="subjectSelect" required onchange="onSubjectSelected()">
+                    <option value="">-- Select Subject --</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="facultyNameGroup" style="display: none;">
+                <label for="facultyNameSelect">Step 3: Select Your Name</label>
+                <select id="facultyNameSelect" required onchange="showFacultyInfo()">
+                    <option value="">-- Select Faculty Name --</option>
                 </select>
             </div>
 
@@ -175,12 +189,12 @@
                 <p><strong>Department:</strong> <span id="infoDepartment"></span></p>
             </div>
 
-            <div class="form-group">
+            <div class="form-group" id="passwordGroup" style="display: none;">
                 <label for="password">Password</label>
                 <input type="password" id="password" placeholder="Enter your password" required>
             </div>
 
-            <button type="submit" class="btn-login">🔐 Login</button>
+            <button type="submit" class="btn-login" id="loginBtn" disabled>🔐 Login</button>
         </form>
 
         <footer>
@@ -191,16 +205,19 @@
     <script>
         const API_BASE = 'http://localhost:3000';
         let facultyList = [];
+        let selectedSemester = '';
+        let selectedSubject = '';
+        let selectedName = '';
 
         // Load faculty list on page load
         window.addEventListener('DOMContentLoaded', async () => {
             try {
-                const response = await fetch(`${API_BASE}/api/faculty/list`);
+                const response = await fetch(`${API_BASE}/api/faculty/full-list`);
                 const result = await response.json();
                 
                 if (result.success) {
                     facultyList = result.data;
-                    populateFacultyDropdown(facultyList);
+                    populateSemesters();
                 }
             } catch (error) {
                 console.error('Error loading faculty list:', error);
@@ -213,43 +230,147 @@
             }
         });
 
-        function populateFacultyDropdown(faculty) {
-            const select = document.getElementById('facultySelect');
-            faculty.forEach(f => {
+        function populateSemesters() {
+            const select = document.getElementById('semesterSelect');
+            
+            // Get unique semesters from all faculty
+            const semesters = [...new Set(facultyList.map(f => f.semester))];
+            
+            semesters.sort().forEach(semester => {
                 const option = document.createElement('option');
-                option.value = f.id;
-                option.textContent = `${f.name} (${f.semester})`;
+                option.value = semester;
+                option.textContent = semester;
+                select.appendChild(option);
+            });
+        }
+
+        function onSemesterSelected() {
+            const semesterSelect = document.getElementById('semesterSelect');
+            selectedSemester = semesterSelect.value;
+            
+            if (!selectedSemester) {
+                // Hide subsequent fields
+                document.getElementById('subjectGroup').style.display = 'none';
+                document.getElementById('facultyNameGroup').style.display = 'none';
+                document.getElementById('passwordGroup').style.display = 'none';
+                document.getElementById('facultyInfo').style.display = 'none';
+                document.getElementById('loginBtn').disabled = true;
+                return;
+            }
+            
+            // Reset subject and name
+            selectedSubject = '';
+            selectedName = '';
+            document.getElementById('facultyNameGroup').style.display = 'none';
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('facultyInfo').style.display = 'none';
+            document.getElementById('loginBtn').disabled = true;
+            
+            // Populate subjects for selected semester
+            populateSubjects();
+            document.getElementById('subjectGroup').style.display = 'block';
+        }
+
+        function populateSubjects() {
+            const select = document.getElementById('subjectSelect');
+            select.innerHTML = '<option value="">-- Select Subject --</option>';
+            
+            // Get unique subjects for this semester
+            const subjects = [...new Set(
+                facultyList
+                    .filter(f => f.semester === selectedSemester)
+                    .map(f => f.subject)
+            )];
+            
+            subjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                select.appendChild(option);
+            });
+        }
+
+        function onSubjectSelected() {
+            const subjectSelect = document.getElementById('subjectSelect');
+            selectedSubject = subjectSelect.value;
+            
+            if (!selectedSubject) {
+                // Hide subsequent fields
+                document.getElementById('facultyNameGroup').style.display = 'none';
+                document.getElementById('passwordGroup').style.display = 'none';
+                document.getElementById('facultyInfo').style.display = 'none';
+                document.getElementById('loginBtn').disabled = true;
+                return;
+            }
+            
+            // Reset name
+            selectedName = '';
+            document.getElementById('passwordGroup').style.display = 'none';
+            document.getElementById('facultyInfo').style.display = 'none';
+            document.getElementById('loginBtn').disabled = true;
+            
+            // Populate faculty names for selected semester and subject
+            populateFacultyNames();
+            document.getElementById('facultyNameGroup').style.display = 'block';
+        }
+
+        function populateFacultyNames() {
+            const select = document.getElementById('facultyNameSelect');
+            select.innerHTML = '<option value="">-- Select Faculty Name --</option>';
+            
+            // Get faculty names for this semester and subject
+            const faculties = facultyList.filter(f => 
+                f.semester === selectedSemester && 
+                f.subject === selectedSubject
+            );
+            
+            faculties.forEach(faculty => {
+                const option = document.createElement('option');
+                option.value = faculty.id;
+                option.textContent = `${faculty.name} (${faculty.id})`;
                 select.appendChild(option);
             });
         }
 
         function showFacultyInfo() {
-            const select = document.getElementById('facultySelect');
+            const nameSelect = document.getElementById('facultyNameSelect');
+            selectedName = nameSelect.value;
             const infoDiv = document.getElementById('facultyInfo');
-            const selectedId = select.value;
 
-            if (selectedId) {
-                const faculty = facultyList.find(f => f.id === selectedId);
-                if (faculty) {
-                    document.getElementById('infoSemester').textContent = faculty.semester;
-                    document.getElementById('infoSubject').textContent = faculty.subject;
-                    document.getElementById('infoDepartment').textContent = faculty.department;
-                    infoDiv.style.display = 'block';
-                }
-            } else {
+            if (!selectedName) {
                 infoDiv.style.display = 'none';
+                document.getElementById('passwordGroup').style.display = 'none';
+                document.getElementById('loginBtn').disabled = true;
+                return;
+            }
+
+            // Find the faculty entry
+            const faculty = facultyList.find(f => 
+                f.id === selectedName && 
+                f.semester === selectedSemester && 
+                f.subject === selectedSubject
+            );
+            
+            if (faculty) {
+                document.getElementById('infoSemester').textContent = faculty.semester;
+                document.getElementById('infoSubject').textContent = faculty.subject;
+                document.getElementById('infoDepartment').textContent = faculty.department;
+                infoDiv.style.display = 'block';
+                
+                // Show password field and enable login button
+                document.getElementById('passwordGroup').style.display = 'block';
+                document.getElementById('loginBtn').disabled = false;
             }
         }
 
         async function handleLogin(event) {
             event.preventDefault();
             
-            const facultyId = document.getElementById('facultySelect').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('errorMessage');
 
-            if (!facultyId) {
-                errorDiv.textContent = 'Please select your name';
+            if (!selectedSemester || !selectedSubject || !selectedName) {
+                errorDiv.textContent = 'Please complete all selection steps';
                 errorDiv.style.display = 'block';
                 return;
             }
@@ -258,14 +379,26 @@
                 const response = await fetch(`${API_BASE}/api/faculty/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ facultyId, password })
+                    body: JSON.stringify({ 
+                        facultyId: selectedName, 
+                        password,
+                        semester: selectedSemester,
+                        subject: selectedSubject
+                    })
                 });
 
                 const result = await response.json();
 
                 if (result.success) {
-                    // Store session
-                    sessionStorage.setItem('facultySession', JSON.stringify(result.faculty));
+                    // Find the full faculty object
+                    const faculty = facultyList.find(f => 
+                        f.id === selectedName && 
+                        f.semester === selectedSemester && 
+                        f.subject === selectedSubject
+                    );
+                    
+                    // Store session with complete faculty info
+                    sessionStorage.setItem('facultySession', JSON.stringify(faculty));
                     // Redirect to dashboard
                     window.location.href = 'dashboard.html';
                 } else {
@@ -274,6 +407,7 @@
                     document.getElementById('password').value = '';
                 }
             } catch (error) {
+                console.error('Login error:', error);
                 errorDiv.textContent = 'Error connecting to server';
                 errorDiv.style.display = 'block';
             }

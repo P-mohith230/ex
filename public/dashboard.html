@@ -404,11 +404,14 @@
         Faculty Attendance Portal &copy; 2025 | Logged in as <span id="footerName"></span>
     </footer>
 
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script>
         const API_BASE = 'http://localhost:3000';
         let faculty = null;
         let students = [];
-        let attendanceStatus = {}; // { rollNo: 'P' or 'A' }
+        let attendanceStatus = {};
+        let isAttendanceAlreadyTaken = false; // Flag to track if attendance was already saved
+        let existingAttendanceDate = null; // { rollNo: 'P' or 'A' }
 
         // Check login and load data
         window.addEventListener('DOMContentLoaded', async () => {
@@ -451,7 +454,8 @@
 
         async function loadStudents() {
             try {
-                const response = await fetch(`${API_BASE}/api/students/${faculty.semester}`);
+                // Fetch students from faculty's attendance sheet, not all semester students
+                const response = await fetch(`${API_BASE}/api/students/faculty/${faculty.id}?semester=${encodeURIComponent(faculty.semester)}&subject=${encodeURIComponent(faculty.subject)}`);
                 const result = await response.json();
 
                 if (result.success) {
@@ -467,33 +471,116 @@
 
         async function loadAttendanceForDate() {
             const dateInput = document.getElementById('attendanceDate').value;
-            if (!dateInput) return;
+            if (!dateInput) {
+                // Reset state when no date selected
+                isAttendanceAlreadyTaken = false;
+                existingAttendanceDate = null;
+                attendanceStatus = {};
+                renderStudentsTable();
+                return;
+            }
             
             const formattedDate = formatDateForSheet(dateInput);
+            console.log('Checking attendance for date:', formattedDate);
             
             try {
-                const response = await fetch(`${API_BASE}/api/attendance/load/${faculty.id}/${formattedDate}`);
-                const result = await response.json();
-
-                if (result.success && result.exists) {
-                    // Load existing attendance into state
-                    attendanceStatus = result.attendance;
+                // Get the Excel file name for this faculty
+                const fileName = `${faculty.id}_${faculty.semester.replace('-', '_')}_${faculty.subject.replace(/\s+/g, '_')}.xlsx`;
+                
+                // Fetch the actual Excel file
+                const sheetResponse = await fetch(`${API_BASE}/sheets/${fileName}`);
+                
+                if (!sheetResponse.ok) {
+                    console.log('Sheet file not found, allowing new attendance');
+                    isAttendanceAlreadyTaken = false;
+                    existingAttendanceDate = null;
+                    attendanceStatus = {};
                     renderStudentsTable();
+                    return;
+                }
+                
+                // Parse the Excel file
+                const arrayBuffer = await sheetResponse.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                if (jsonData.length === 0) {
+                    console.log('Empty sheet, allowing new attendance');
+                    isAttendanceAlreadyTaken = false;
+                    existingAttendanceDate = null;
+                    attendanceStatus = {};
+                    renderStudentsTable();
+                    return;
+                }
+                
+                // Find the date column in header row
+                const headerRow = jsonData[0];
+                const dateColumnIndex = headerRow.indexOf(formattedDate);
+                
+                console.log('Header row:', headerRow);
+                console.log('Looking for date column:', formattedDate, 'Found at index:', dateColumnIndex);
+                
+                if (dateColumnIndex === -1) {
+                    // Date column doesn't exist in sheet - no attendance taken yet
+                    console.log('Date column not found in sheet, allowing new attendance');
+                    isAttendanceAlreadyTaken = false;
+                    existingAttendanceDate = null;
+                    attendanceStatus = {};
+                    renderStudentsTable();
+                } else {
+                    // Date column exists - check if it has attendance data
+                    const attendanceData = {};
+                    let hasAnyData = false;
                     
-                    // Show info if data was loaded
-                    const markedCount = Object.keys(attendanceStatus).filter(k => attendanceStatus[k]).length;
-                    if (markedCount > 0) {
-                        showMessage(`📋 Loaded existing attendance for ${formattedDate}: ${markedCount} students marked`, 'success');
+                    // Read attendance from the date column (skip header row)
+                    for (let i = 1; i < jsonData.length; i++) {
+                        const row = jsonData[i];
+                        const rollNo = row[1]; // Roll No is typically column index 1
+                        const status = row[dateColumnIndex];
+                        
+                        if (rollNo && (status === 'P' || status === 'A')) {
+                            attendanceData[rollNo] = status;
+                            hasAnyData = true;
+                        }
+                    }
+                    
+                    if (hasAnyData) {
+                        // Attendance already taken for this date
+                        console.log('Attendance found for ' + formattedDate + ', locking controls');
+                        isAttendanceAlreadyTaken = true;
+                        existingAttendanceDate = formattedDate;
+                        attendanceStatus = attendanceData;
+                        renderStudentsTable();
+                        
+                        const markedCount = Object.keys(attendanceData).length;
+                        showMessage(`⚠️ You already took attendance on ${formattedDate} (${markedCount} students marked). Buttons are disabled. Contact admin if you need to make changes.`, 'error');
+                    } else {
+                        // Date column exists but empty - allow new attendance
+                        console.log('Date column exists but empty, allowing new attendance');
+                        isAttendanceAlreadyTaken = false;
+                        existingAttendanceDate = null;
+                        attendanceStatus = {};
+                        renderStudentsTable();
                     }
                 }
+                
             } catch (error) {
-                console.error('Error loading attendance:', error);
+                console.error('Error loading attendance from Excel:', error);
+                // On error, allow new attendance entry
+                isAttendanceAlreadyTaken = false;
+                existingAttendanceDate = null;
+                attendanceStatus = {};
+                renderStudentsTable();
             }
         }
 
         // Add event listener for date change
         document.getElementById('attendanceDate').addEventListener('change', async () => {
+            console.log('Date changed, resetting state...');
             attendanceStatus = {}; // Clear current status
+            isAttendanceAlreadyTaken = false;
+            existingAttendanceDate = null;
             await loadAttendanceForDate();
         });
 
@@ -504,24 +591,55 @@
             students.forEach((student, index) => {
                 const status = attendanceStatus[student.rollNo] || '';
                 const row = document.createElement('tr');
+                
+                // Disable buttons if attendance already taken
+                const disabledAttr = isAttendanceAlreadyTaken ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
+                const disabledClass = isAttendanceAlreadyTaken ? 'disabled' : '';
+                
                 row.innerHTML = `
                     <td>${index + 1}</td>
                     <td><strong>${student.rollNo}</strong></td>
                     <td>${student.name}</td>
                     <td>
                         <div class="attendance-toggle">
-                            <button class="toggle-btn present ${status === 'P' ? 'active' : ''}" 
-                                    onclick="toggleAttendance('${student.rollNo}', 'P', this)">P</button>
-                            <button class="toggle-btn absent ${status === 'A' ? 'active' : ''}" 
-                                    onclick="toggleAttendance('${student.rollNo}', 'A', this)">A</button>
+                            <button class="toggle-btn present ${status === 'P' ? 'active' : ''} ${disabledClass}" 
+                                    onclick="toggleAttendance('${student.rollNo}', 'P', this)"
+                                    ${disabledAttr}>P</button>
+                            <button class="toggle-btn absent ${status === 'A' ? 'active' : ''} ${disabledClass}" 
+                                    onclick="toggleAttendance('${student.rollNo}', 'A', this)"
+                                    ${disabledAttr}>A</button>
                         </div>
                     </td>
                 `;
                 tbody.appendChild(row);
             });
+            
+            // Update action buttons state
+            updateActionButtons();
+        }
+        
+        function updateActionButtons() {
+            const buttons = document.querySelectorAll('.quick-actions button');
+            buttons.forEach(btn => {
+                if (isAttendanceAlreadyTaken) {
+                    btn.disabled = true;
+                    btn.style.opacity = '0.5';
+                    btn.style.cursor = 'not-allowed';
+                } else {
+                    btn.disabled = false;
+                    btn.style.opacity = '1';
+                    btn.style.cursor = 'pointer';
+                }
+            });
         }
 
         function toggleAttendance(rollNo, status, btn) {
+            // Don't allow changes if attendance already taken
+            if (isAttendanceAlreadyTaken) {
+                showMessage('⚠️ Attendance already taken for this date. Contact admin to make changes.', 'error');
+                return;
+            }
+            
             // Clear previous selection for this student
             const row = btn.closest('tr');
             row.querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active'));
@@ -532,6 +650,11 @@
         }
 
         function markAll(status) {
+            if (isAttendanceAlreadyTaken) {
+                showMessage('⚠️ Attendance already taken for this date. Contact admin to make changes.', 'error');
+                return;
+            }
+            
             students.forEach(student => {
                 attendanceStatus[student.rollNo] = status;
             });
@@ -539,11 +662,22 @@
         }
 
         function clearAll() {
+            if (isAttendanceAlreadyTaken) {
+                showMessage('⚠️ Attendance already taken for this date. Contact admin to make changes.', 'error');
+                return;
+            }
+            
             attendanceStatus = {};
             renderStudentsTable();
         }
 
         async function saveAttendance() {
+            // Check if attendance already taken
+            if (isAttendanceAlreadyTaken) {
+                showMessage('⚠️ You already took attendance on ' + existingAttendanceDate + '. Contact admin if you need to make changes.', 'error');
+                return;
+            }
+            
             const date = document.getElementById('attendanceDate').value;
             if (!date) {
                 showMessage('Please select a date', 'error');
